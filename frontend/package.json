@@ -1,0 +1,29 @@
+{
+  "name": "courseguard-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "type-check": "vue-tsc --noEmit",
+    "lint": "eslint . --ext .vue,.ts,.tsx,.js --max-warnings 0"
+  },
+  "dependencies": {
+    "element-plus": "^2.7.6",
+    "pinia": "^2.1.7",
+    "vue": "^3.4.31",
+    "vue-router": "^4.4.0"
+  },
+  "devDependencies": {
+    "@rushstack/eslint-patch": "^1.10.3",
+    "@vitejs/plugin-vue": "^5.0.5",
+    "@vue/eslint-config-typescript": "^13.0.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-vue": "^9.27.0",
+    "typescript": "~5.4.5",
+    "vite": "^5.3.3",
+    "vue-tsc": "^2.0.24"
+  }
+}

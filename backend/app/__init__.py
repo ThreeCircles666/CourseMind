@@ -1,0 +1,1 @@
+"""CourseGuard API application package."""
