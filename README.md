@@ -20,9 +20,12 @@ Monorepo 结构：Vue 3 前端 + FastAPI 后端。
 
 ## 2. 当前阶段
 
-**仅项目骨架与前后端连通测试。** 尚未实现任何核心业务功能（无登录、无课程管理、
-无文件上传、无 RAG、无大模型调用、无数据库业务表等）。目标是获得结构清晰、可运行、
-可验证前后端连通性的框架。
+**已完成功能**:
+- ✅ 项目骨架与前后端连通测试
+- ✅ 阿里云百炼 Qwen 大模型接入
+- ✅ AI 聊天界面（流式对话）
+
+**待实现功能**: 登录、课程管理、文件上传、RAG、数据库业务表等。
 
 ## 3. 技术栈
 
@@ -86,6 +89,25 @@ npm run build        # 生产构建
 ```
 
 ## 7. 后端安装与启动
+
+### 环境变量配置
+
+**重要**: AI 聊天功能需要配置阿里云 DashScope API Key。
+
+```bash
+# macOS/Linux
+export DASHSCOPE_API_KEY=your-api-key-here
+
+# Windows PowerShell
+$env:DASHSCOPE_API_KEY="your-api-key-here"
+```
+
+**安全提示**: 
+- 不要将 API Key 写入 `.env` 文件或提交到版本控制
+- 仅通过系统环境变量配置
+- 前端无法访问此密钥
+
+### 启动后端
 
 ```bash
 cd backend

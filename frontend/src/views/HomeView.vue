@@ -42,6 +42,9 @@ onMounted(() => {
         >
           重新测试后端连接
         </el-button>
+        <el-button type="success" @click="$router.push('/chat')">
+          进入聊天界面
+        </el-button>
       </div>
 
       <el-descriptions
@@ -103,6 +106,8 @@ onMounted(() => {
 
 .home__actions {
   margin: 20px 0;
+  display: flex;
+  gap: 12px;
 }
 
 .home__result {
