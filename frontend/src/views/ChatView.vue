@@ -2,11 +2,13 @@
 import { ref, nextTick, watch, onMounted } from 'vue'
 import { useStreamChat } from '@/composables/useStreamChat'
 import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as chatApi from '@/api/chat'
 import type { SessionSummary } from '@/api/chat'
 
 const auth = useAuthStore()
+const router = useRouter()
 const { 
   messages, 
   currentSessionId, 
@@ -22,11 +24,20 @@ const inputMessage = ref('')
 const chatContainer = ref<HTMLElement>()
 const sessions = ref<SessionSummary[]>([])
 const loadingSessions = ref(false)
+const sidebarCollapsed = ref(false)
 
 // Load session list on mount
 onMounted(async () => {
   await refreshSessions()
 })
+
+function toggleSidebar() {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+}
+
+function handleBack() {
+  router.push('/')
+}
 
 async function refreshSessions() {
   try {
@@ -151,10 +162,11 @@ watch(
 <template>
   <div class="chat-layout">
     <!-- Sidebar -->
-    <div class="chat-sidebar">
+    <div :class="['chat-sidebar', { 'chat-sidebar--collapsed': sidebarCollapsed }]">
       <div class="chat-sidebar__header">
-        <h3 class="chat-sidebar__title">会话历史</h3>
+        <h3 v-if="!sidebarCollapsed" class="chat-sidebar__title">会话历史</h3>
         <el-button 
+          v-if="!sidebarCollapsed"
           type="primary" 
           size="small" 
           @click="handleNewChat"
@@ -162,9 +174,20 @@ watch(
         >
           新建会话
         </el-button>
+        <el-tooltip v-else content="新建会话" placement="right">
+          <el-button 
+            type="primary" 
+            size="small"
+            circle
+            @click="handleNewChat"
+            :disabled="isLoading"
+          >
+            <el-icon><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M480 480V128a32 32 0 0 1 64 0v352h352a32 32 0 1 1 0 64H544v352a32 32 0 1 1-64 0V544H128a32 32 0 0 1 0-64h352z"/></svg></el-icon>
+          </el-button>
+        </el-tooltip>
       </div>
       
-      <div class="chat-sidebar__list" v-loading="loadingSessions">
+      <div v-if="!sidebarCollapsed" class="chat-sidebar__list" v-loading="loadingSessions">
         <div
           v-for="session in sessions"
           :key="session.id"
@@ -206,6 +229,16 @@ watch(
           :image-size="80"
         />
       </div>
+
+      <div class="chat-sidebar__toggle">
+        <el-button 
+          text 
+          @click="toggleSidebar"
+          :icon="sidebarCollapsed ? 'ArrowRight' : 'ArrowLeft'"
+        >
+          {{ sidebarCollapsed ? '' : '收起' }}
+        </el-button>
+      </div>
     </div>
 
     <!-- Main Chat Area -->
@@ -213,14 +246,24 @@ watch(
       <el-card class="chat__card" shadow="never">
         <template #header>
           <div class="chat__header">
-            <div>
-              <h2 class="chat__title">AI 聊天助手</h2>
-              <p class="chat__subtitle">
-                {{ auth.user?.nickname }} · 基于阿里云百炼 Qwen 模型
-                <span v-if="currentSessionId" class="chat__session-id">
-                  · 会话 #{{ currentSessionId }}
-                </span>
-              </p>
+            <div class="chat__header-left">
+              <el-button 
+                text 
+                @click="handleBack"
+                class="chat__back-button"
+              >
+                <el-icon><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M224 480h640a32 32 0 1 1 0 64H224a32 32 0 0 1 0-64z"/><path fill="currentColor" d="m237.248 512 265.408 265.344a32 32 0 0 1-45.312 45.312l-288-288a32 32 0 0 1 0-45.312l288-288a32 32 0 1 1 45.312 45.312L237.248 512z"/></svg></el-icon>
+                返回
+              </el-button>
+              <div>
+                <h2 class="chat__title">AI 聊天助手</h2>
+                <p class="chat__subtitle">
+                  {{ auth.user?.nickname }} · 基于阿里云百炼 Qwen 模型
+                  <span v-if="currentSessionId" class="chat__session-id">
+                    · 会话 #{{ currentSessionId }}
+                  </span>
+                </p>
+              </div>
             </div>
           </div>
         </template>
@@ -313,6 +356,12 @@ watch(
   display: flex;
   flex-direction: column;
   background-color: var(--el-bg-color);
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.chat-sidebar--collapsed {
+  width: 60px;
 }
 
 .chat-sidebar__header {
@@ -322,6 +371,12 @@ watch(
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 80px;
+}
+
+.chat-sidebar--collapsed .chat-sidebar__header {
+  justify-content: center;
+  padding: 20px 10px;
 }
 
 .chat-sidebar__title {
@@ -334,6 +389,12 @@ watch(
   flex: 1;
   overflow-y: auto;
   padding: 8px;
+}
+
+.chat-sidebar__toggle {
+  padding: 12px;
+  border-top: 1px solid var(--el-border-color);
+  text-align: center;
 }
 
 .chat-sidebar__item {
@@ -414,6 +475,17 @@ watch(
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.chat__header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.chat__back-button {
+  font-size: 14px;
+  padding: 8px 12px;
 }
 
 .chat__title {
