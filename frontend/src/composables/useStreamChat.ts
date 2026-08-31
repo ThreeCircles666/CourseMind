@@ -1,5 +1,6 @@
 import { ref, onUnmounted } from 'vue'
 import { authenticatedFetch } from '@/api/client'
+import * as chatApi from '@/api/chat'
 
 export interface Message {
   id: number
@@ -10,23 +11,38 @@ export interface Message {
 
 export function useStreamChat() {
   const messages = ref<Message[]>([])
+  const currentSessionId = ref<number | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   const abortController = ref<AbortController | null>(null)
 
   let messageIdCounter = 0
 
-  const sendMessage = async (userMessage: string) => {
-    if (isLoading.value) {
-      return
+  const loadSession = async (sessionId: number) => {
+    try {
+      const session = await chatApi.getSession(sessionId)
+      currentSessionId.value = session.id
+      messages.value = session.messages.map((msg) => ({
+        id: messageIdCounter++,
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+      }))
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '加载会话失败'
+      throw err
     }
+  }
+
+  const sendMessage = async (userMessage: string) => {
+    if (isLoading.value) return
 
     error.value = null
     isLoading.value = true
     abortController.value = new AbortController()
 
+    const userMsgId = messageIdCounter++
     messages.value.push({
-      id: messageIdCounter++,
+      id: userMsgId,
       role: 'user',
       content: userMessage,
     })
@@ -42,74 +58,59 @@ export function useStreamChat() {
     try {
       const response = await authenticatedFetch('/api/v1/chat/stream', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: userMessage }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage,
+          session_id: currentSessionId.value,
+        }),
         signal: abortController.value.signal,
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        let errorMessage = `HTTP ${response.status}`
-        try {
-          const errorJson = JSON.parse(errorText)
-          errorMessage = errorJson.detail || errorMessage
-        } catch {
-          errorMessage = errorText || errorMessage
-        }
-        throw new Error(errorMessage)
+        throw new Error(`HTTP ${response.status}`)
       }
 
-      if (!response.body) {
-        throw new Error('响应体为空')
-      }
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
 
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder('utf-8')
-      let buffer = ''
+      if (!reader) {
+        throw new Error('No response body')
+      }
 
       while (true) {
         const { done, value } = await reader.read()
+        if (done) break
 
-        if (done) {
-          break
-        }
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n')
 
         for (const line of lines) {
-          if (!line.trim()) {
-            continue
-          }
+          if (!line.startsWith('data: ')) continue
 
-          if (line.startsWith('data:')) {
-            const data = line.substring(5).trim()
+          const data = line.slice(6).trim()
+          if (!data) continue
 
-            try {
-              const event = JSON.parse(data)
+          try {
+            const event = JSON.parse(data)
+
+            if (event.type === 'session' && event.session_id) {
+              currentSessionId.value = event.session_id
+            } else if (event.type === 'content' && event.content) {
               const assistantMessage = messages.value.find((m) => m.id === assistantMessageId)
-              
-              if (event.type === 'content' && event.content) {
-                if (assistantMessage) {
-                  assistantMessage.content += event.content
-                }
-              } else if (event.type === 'done') {
-                if (assistantMessage) {
-                  assistantMessage.isStreaming = false
-                }
-                break
-              } else if (event.type === 'error') {
-                throw new Error(event.error || '服务器返回错误')
+              if (assistantMessage) {
+                assistantMessage.content += event.content
               }
-            } catch (parseError) {
-              if (parseError instanceof SyntaxError) {
-                continue
+            } else if (event.type === 'done') {
+              const assistantMessage = messages.value.find((m) => m.id === assistantMessageId)
+              if (assistantMessage) {
+                assistantMessage.isStreaming = false
               }
-              throw parseError
+            } else if (event.type === 'error') {
+              throw new Error(event.error || '未知错误')
             }
+          } catch (parseError) {
+            console.error('Failed to parse SSE event:', parseError)
+            throw parseError
           }
         }
       }
@@ -119,17 +120,23 @@ export function useStreamChat() {
         assistantMessage.isStreaming = false
       }
     } catch (err: any) {
+      console.error('Chat stream error:', err)
+      
       if (err.name === 'AbortError') {
         error.value = '请求已取消'
       } else {
-        error.value = err.message || '未知错误'
+        error.value = err.message || '发送消息失败'
       }
 
       const assistantMessage = messages.value.find((m) => m.id === assistantMessageId)
-      if (assistantMessage && !assistantMessage.content) {
-        assistantMessage.content = `[错误] ${error.value}`
+      if (assistantMessage) {
+        if (!assistantMessage.content) {
+          assistantMessage.content = `❌ ${error.value}`
+        }
         assistantMessage.isStreaming = false
       }
+      
+      throw err
     } finally {
       isLoading.value = false
       abortController.value = null
@@ -137,14 +144,17 @@ export function useStreamChat() {
   }
 
   const cancelRequest = () => {
-    if (abortController.value) {
-      abortController.value.abort()
-    }
+    abortController.value?.abort()
   }
 
   const clearMessages = () => {
     messages.value = []
+    currentSessionId.value = null
     error.value = null
+  }
+
+  const startNewSession = () => {
+    clearMessages()
   }
 
   onUnmounted(() => {
@@ -153,10 +163,13 @@ export function useStreamChat() {
 
   return {
     messages,
+    currentSessionId,
     isLoading,
     error,
+    loadSession,
     sendMessage,
     cancelRequest,
     clearMessages,
+    startNewSession,
   }
 }

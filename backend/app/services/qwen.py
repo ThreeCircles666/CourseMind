@@ -35,6 +35,98 @@ class QwenRateLimitError(QwenServiceError):
     pass
 
 
+async def stream_qwen_chat_with_context(
+    api_key: str,
+    context: list[dict[str, str]],
+    user_nickname: str = "",
+    model: str = "qwen3.8-flash",
+    timeout: float = 60.0,
+) -> AsyncGenerator[str, None]:
+    """Stream chat with multi-turn context and optional user nickname.
+
+    Args:
+        api_key: DashScope API key.
+        context: List of message dicts with 'role' and 'content'.
+        user_nickname: User's nickname for personalized responses.
+        model: Model ID to use.
+        timeout: Request timeout in seconds.
+
+    Yields:
+        str: Incremental text chunks from the model.
+
+    Raises:
+        QwenAuthError: Invalid API key.
+        QwenModelError: Model not found.
+        QwenRateLimitError: Rate limit exceeded.
+        QwenServiceError: Other API or network errors.
+    """
+    url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+    
+    # Build messages with optional system prompt
+    messages = []
+    if user_nickname:
+        messages.append({
+            "role": "system",
+            "content": f"用户昵称是「{user_nickname}」，在自然且合适的情况下可以这样称呼用户。"
+        })
+    messages.extend(context)
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": model,
+        "messages": messages,
+        "stream": True,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            async with client.stream("POST", url, headers=headers, json=payload) as response:
+                if response.status_code == 401:
+                    raise QwenAuthError("API key authentication failed. Please check DASHSCOPE_API_KEY.")
+                elif response.status_code == 404:
+                    raise QwenModelError(
+                        f"Model '{model}' not found or not accessible. "
+                        "Please verify model ID and account permissions."
+                    )
+                elif response.status_code == 429:
+                    raise QwenRateLimitError("Rate limit exceeded. Please try again later.")
+                elif response.status_code >= 400:
+                    error_text = await response.aread()
+                    error_summary = _extract_error_summary(error_text)
+                    raise QwenServiceError(
+                        f"DashScope API error (HTTP {response.status_code}): {error_summary}"
+                    )
+
+                async for line in response.aiter_lines():
+                    if not line.strip():
+                        continue
+                    if line.startswith("data: "):
+                        data_str = line[6:]
+                        if data_str == "[DONE]":
+                            break
+                        try:
+                            data = json.loads(data_str)
+                            if "choices" in data and len(data["choices"]) > 0:
+                                delta = data["choices"][0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    yield content
+                        except json.JSONDecodeError:
+                            continue
+
+    except httpx.TimeoutException as e:
+        raise QwenServiceError(f"Request timeout: {e}")
+    except httpx.NetworkError as e:
+        raise QwenServiceError(f"Network error: {e}")
+    except (QwenAuthError, QwenModelError, QwenRateLimitError):
+        raise
+    except Exception as e:
+        raise QwenServiceError(f"Unexpected error: {type(e).__name__}")
+
+
 async def stream_qwen_chat(
     api_key: str,
     message: str,
