@@ -12,6 +12,8 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
+from app.db.base import Base
+from app.models import User
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
@@ -19,8 +21,7 @@ config.set_main_option("sqlalchemy.url", settings.database_url)
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# No models yet; nothing to autogenerate against.
-target_metadata = None
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:

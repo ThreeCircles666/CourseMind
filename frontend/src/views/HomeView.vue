@@ -1,10 +1,19 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
+import { useAuthStore } from '@/stores/auth'
 
 const store = useAppStore()
+const auth = useAuthStore()
+const router = useRouter()
 const { projectName, teamName, backendStatus, health, errorMessage } = storeToRefs(store)
+
+async function handleSignOut() {
+  await auth.signOut()
+  await router.replace({ name: 'login' })
+}
 
 onMounted(() => {
   store.checkBackend()
@@ -16,8 +25,14 @@ onMounted(() => {
     <el-card class="home__card" shadow="never">
       <template #header>
         <div class="home__header">
-          <h1 class="home__title">{{ projectName }}</h1>
-          <el-tag type="info" effect="plain">{{ teamName }}</el-tag>
+          <div>
+            <h1 class="home__title">{{ projectName }}</h1>
+            <p class="home__welcome">欢迎，{{ auth.user?.nickname }}</p>
+          </div>
+          <div class="home__header-actions">
+            <el-tag type="info" effect="plain">{{ teamName }}</el-tag>
+            <el-button link @click="handleSignOut">退出登录</el-button>
+          </div>
         </div>
       </template>
 
@@ -97,6 +112,17 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.home__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.home__welcome {
+  margin: 4px 0 0;
+  color: var(--el-text-color-secondary);
 }
 
 .home__title {

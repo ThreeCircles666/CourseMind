@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, nextTick, watch } from 'vue'
 import { useStreamChat } from '@/composables/useStreamChat'
+import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 
+const auth = useAuthStore()
 const { messages, isLoading, error, sendMessage, cancelRequest, clearMessages } = useStreamChat()
 
 const inputMessage = ref('')
@@ -59,7 +61,7 @@ watch(
         <div class="chat__header">
           <div>
             <h2 class="chat__title">AI 聊天助手</h2>
-            <p class="chat__subtitle">基于阿里云百炼 Qwen 模型</p>
+            <p class="chat__subtitle">{{ auth.user?.nickname }} · 基于阿里云百炼 Qwen 模型</p>
           </div>
           <el-button
             v-if="messages.length > 0"

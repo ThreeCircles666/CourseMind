@@ -4,10 +4,12 @@ from __future__ import annotations
 import json
 from typing import AsyncGenerator
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
+from app.api.dependencies import get_current_user
 from app.core.config import settings
+from app.models.user import User
 from app.schemas.chat import ChatRequest, ChatStreamEvent
 from app.services.qwen import (
     QwenAuthError,
@@ -21,7 +23,10 @@ router = APIRouter(tags=["chat"])
 
 
 @router.post("/chat/stream")
-async def chat_stream(request: ChatRequest) -> StreamingResponse:
+async def chat_stream(
+    request: ChatRequest,
+    _current_user: User = Depends(get_current_user),
+) -> StreamingResponse:
     """Stream chat completion from Qwen model.
 
     Args:

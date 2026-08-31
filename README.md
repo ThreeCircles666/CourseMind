@@ -88,15 +88,33 @@ npm run lint         # ESLint 检查
 npm run build        # 生产构建
 ```
 
-## 7. 后端安装与启动
+## 15. 认证与数据库
 
-### 环境变量配置
+认证使用短期 JWT Access Token 与 HttpOnly Refresh Cookie。Access Token 仅保存在前端内存，刷新页面时通过 Cookie 调用 `/api/v1/auth/refresh` 恢复；退出登录会递增用户的 token_version，使旧 Access Token 立即失效。聊天接口需要有效 Bearer Token。
 
-**重要**: AI 聊天功能需要配置阿里云 DashScope API Key。
+准备本地环境并启动 PostgreSQL 后，在 `backend` 目录执行：
 
 ```bash
-# macOS/Linux
-export DASHSCOPE_API_KEY=your-api-key-here
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate  # macOS/Linux
+# Windows: .\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+alembic upgrade head
+uvicorn app.main:app --reload --port 8000
+```
+
+`backend/.env` 中必须设置至少 32 个字符的 `JWT_SECRET_KEY`，数据库连接默认是用户提供的本地 CourseMind PostgreSQL 地址。随后在另一个终端执行：
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## 16. 当前业务功能
+
+当前已包含用户注册、登录、刷新登录状态、获取当前用户、退出登录、前端公开/访客/受保护路由以及受保护的 AI 聊天接口。
 
 # Windows PowerShell
 $env:DASHSCOPE_API_KEY="your-api-key-here"

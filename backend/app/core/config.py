@@ -30,8 +30,16 @@ class Settings(BaseSettings):
     # Database URL is configured for future use. It is intentionally NOT
     # connected on startup, so the API works without PostgreSQL running.
     database_url: str = Field(
-        default="postgresql+psycopg://courseguard:courseguard_dev@localhost:5432/courseguard"
+        default="postgresql+psycopg://coursemind:coursemind_dev@127.0.0.1:5432/coursemind"
     )
+
+    jwt_secret_key: str = Field(default="")
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = Field(default=15, ge=1, le=1440)
+    refresh_token_expire_days: int = Field(default=7, ge=1, le=90)
+    refresh_cookie_name: str = "coursemind_refresh"
+    cookie_secure: bool = False
+    cookie_samesite: str = "lax"
 
     # DashScope API Key for Qwen model access.
     # MUST be set via environment variable, never hardcode.
@@ -75,6 +83,14 @@ class Settings(BaseSettings):
         """Check if DashScope API key is configured without exposing the value."""
         key = self.dashscope_api_key or os.getenv("DASHSCOPE_API_KEY", "")
         return bool(key)
+
+    def validate_auth_config(self) -> None:
+        if not self.jwt_secret_key:
+            raise RuntimeError("JWT_SECRET_KEY is required. Set it in backend/.env.")
+        if len(self.jwt_secret_key) < 32:
+            raise RuntimeError("JWT_SECRET_KEY must contain at least 32 characters.")
+        if self.cookie_samesite not in {"lax", "strict", "none"}:
+            raise RuntimeError("COOKIE_SAMESITE must be lax, strict, or none.")
 
 
 settings = Settings()

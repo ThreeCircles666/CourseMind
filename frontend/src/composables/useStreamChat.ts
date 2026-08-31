@@ -1,4 +1,5 @@
 import { ref, onUnmounted } from 'vue'
+import { authenticatedFetch } from '@/api/client'
 
 export interface Message {
   id: number
@@ -39,8 +40,7 @@ export function useStreamChat() {
     })
 
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
-      const response = await fetch(`${apiBaseUrl}/api/v1/chat/stream`, {
+      const response = await authenticatedFetch('/api/v1/chat/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
