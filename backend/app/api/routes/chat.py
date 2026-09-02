@@ -8,6 +8,15 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
+from app.ai import (
+    execute_chat,
+    ChatContext,
+    ChatMessage as AIChatMessage,
+    AIAuthError,
+    AIModelError,
+    AIRateLimitError,
+    AIServiceError,
+)
 from app.api.dependencies import get_current_user
 from app.core.config import settings
 from app.db.session import get_db
@@ -20,13 +29,6 @@ from app.schemas.chat import (
     SessionDetail,
     SessionRenameRequest,
     SessionSummary,
-)
-from app.services.qwen import (
-    QwenAuthError,
-    QwenModelError,
-    QwenRateLimitError,
-    QwenServiceError,
-    stream_qwen_chat_with_context,
 )
 
 router = APIRouter(tags=["chat"])
@@ -119,7 +121,7 @@ async def chat_stream(
     db.flush()
 
     async def event_generator() -> AsyncGenerator[str, None]:
-        """Generate SSE events from Qwen stream with session management."""
+        """Generate SSE events from AI stream with session management."""
         assistant_content = ""
         session_sent = False
 
@@ -130,17 +132,21 @@ async def chat_stream(
                 yield f"data: {session_event.model_dump_json()}\n\n"
                 session_sent = True
 
-            # Build context from history
-            context = [{"role": msg.role, "content": msg.content} for msg in history_messages]
-            context.append({"role": "user", "content": request.message})
-
-            # Stream from Qwen
-            async for chunk in stream_qwen_chat_with_context(
-                api_key=api_key,
-                context=context,
+            # Build AI context from history
+            ai_messages = [
+                AIChatMessage(role=msg.role, content=msg.content) 
+                for msg in history_messages
+            ]
+            ai_messages.append(AIChatMessage(role="user", content=request.message))
+            
+            ai_context = ChatContext(
+                messages=ai_messages,
                 user_nickname=current_user.nickname,
                 model="qwen3.8-flash",
-            ):
+            )
+
+            # Stream from AI control layer
+            async for chunk in execute_chat(api_key=api_key, context=ai_context):
                 assistant_content += chunk
                 event = ChatStreamEvent(type="content", content=chunk)
                 yield f"data: {event.model_dump_json()}\n\n"
@@ -162,19 +168,19 @@ async def chat_stream(
             session_obj.message_count = len(history_messages) + 2
             db.commit()
 
-        except QwenAuthError as e:
+        except AIAuthError as e:
             db.rollback()
             error_event = ChatStreamEvent(type="error", error=str(e))
             yield f"data: {error_event.model_dump_json()}\n\n"
-        except QwenModelError as e:
+        except AIModelError as e:
             db.rollback()
             error_event = ChatStreamEvent(type="error", error=str(e))
             yield f"data: {error_event.model_dump_json()}\n\n"
-        except QwenRateLimitError as e:
+        except AIRateLimitError as e:
             db.rollback()
             error_event = ChatStreamEvent(type="error", error=str(e))
             yield f"data: {error_event.model_dump_json()}\n\n"
-        except QwenServiceError as e:
+        except AIServiceError as e:
             db.rollback()
             error_event = ChatStreamEvent(type="error", error=str(e))
             yield f"data: {error_event.model_dump_json()}\n\n"
