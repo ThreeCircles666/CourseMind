@@ -1,0 +1,4 @@
+
+# Runtime upload storage
+data/uploads/*
+!data/uploads/.gitkeep

@@ -195,9 +195,9 @@ cython_debug/
 .abstra/
 
 # Visual Studio Code
-#   Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore 
+#   Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore
 #   that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
-#   and can be added to the global gitignore or merged into this file. However, if you prefer, 
+#   and can be added to the global gitignore or merged into this file. However, if you prefer,
 #   you could uncomment the following to ignore the entire vscode folder
 # .vscode/
 # Temporary file for partial code execution
@@ -208,6 +208,21 @@ tempCodeRunnerFile.py
 
 # PyPI configuration file
 .pypirc
+
+# Local database backups and one-off recovery artifacts
+backups/*.dump
+backups/*.sql
+backend/check_db.py
+backend/storage_audit.json
+backend/*REPORT.md
+backend/RAG_TEST_FIX_INCOMPLETE.md
+backend/tests/*.bak
+frontend/DOCUMENTS_FEATURE.md
+frontend/*REPORT.md
+frontend/*FIX*.md
+
+# Accidental local copy of the installed pgvector dependency
+backend/app/pgvector/
 
 # Marimo
 marimo/_static/

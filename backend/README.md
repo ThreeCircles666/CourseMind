@@ -1,67 +1,42 @@
-# CourseGuard API (Backend)
+# CourseMind Backend
 
-FastAPI backend skeleton for the YWP Labs AI teaching-assist platform.
+CourseMind 后端是基于 FastAPI、SQLAlchemy、PostgreSQL/pgvector 和 DashScope 的认证、文档处理、向量检索与 RAG 服务。
 
-This is a **skeleton only**. It provides a health check endpoint and a
-configured (but unused) database layer. No business features exist yet.
+完整架构、数据流、API、安全规则和故障排查见 [开发者手册](../docs/DEVELOPER_GUIDE.md)。
 
-## Requirements
-
-- Python 3.11+
-- PostgreSQL is **not** required to run the health check.
-
-## Setup
-
-Create and activate a virtual environment, then install dependencies.
-
-### macOS / Linux
+## 本地启动
 
 ```bash
-cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-```
-
-### Windows PowerShell
-
-```powershell
-cd backend
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -e ".[dev]"
-```
-
-Then copy the environment file:
-
-```bash
-# macOS / Linux
 cp .env.example .env
+alembic upgrade head
+uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-```powershell
-# Windows PowerShell
-Copy-Item .env.example .env
-```
-
-## Run
+需先在仓库根目录启动 PostgreSQL：
 
 ```bash
-uvicorn app.main:app --reload --port 8000
+docker compose up -d postgres
 ```
 
-- API root: http://127.0.0.1:8000/
-- Swagger UI: http://127.0.0.1:8000/docs
-- Health check: http://127.0.0.1:8000/api/v1/health
+配置 `backend/.env` 中的 `DATABASE_URL`、`JWT_SECRET_KEY` 和 `DASHSCOPE_API_KEY`。真实密钥不得提交到 Git。
 
-## Test
+## 常用地址
+
+- API 根路径：<http://127.0.0.1:8000/api/v1>
+- 健康检查：<http://127.0.0.1:8000/api/v1/health>
+- Swagger UI：<http://127.0.0.1:8000/docs>
+
+## 测试
 
 ```bash
-pytest
+.venv/bin/pytest -q
 ```
 
-## Notes
+真实 Embedding/RAG/HTTP 闭环可使用 `scripts/` 下的验收脚本。当前完整后端基线（2026-09-05）为 `298 passed`，以最新本地运行结果为准。
 
-- The health endpoint does not touch the database.
-- SQLAlchemy 2, psycopg 3, and Alembic are installed and minimally
-  configured for future use. There are no models or migrations yet.
+## 上传存储
+
+默认路径是 `backend/data/uploads`，相对路径始终从 `backend` 目录解析，不受启动时工作目录影响。该目录为运行时数据，已被 Git 忽略。

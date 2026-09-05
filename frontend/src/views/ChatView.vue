@@ -164,30 +164,51 @@ watch(
     <!-- Sidebar -->
     <div :class="['chat-sidebar', { 'chat-sidebar--collapsed': sidebarCollapsed }]">
       <div class="chat-sidebar__header">
-        <h3 v-if="!sidebarCollapsed" class="chat-sidebar__title">会话历史</h3>
+        <h3
+          v-if="!sidebarCollapsed"
+          class="chat-sidebar__title"
+        >
+          会话历史
+        </h3>
         <el-button 
           v-if="!sidebarCollapsed"
           type="primary" 
           size="small" 
-          @click="handleNewChat"
           :disabled="isLoading"
+          @click="handleNewChat"
         >
           新建会话
         </el-button>
-        <el-tooltip v-else content="新建会话" placement="right">
+        <el-tooltip
+          v-else
+          content="新建会话"
+          placement="right"
+        >
           <el-button 
             type="primary" 
             size="small"
             circle
-            @click="handleNewChat"
             :disabled="isLoading"
+            @click="handleNewChat"
           >
-            <el-icon><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M480 480V128a32 32 0 0 1 64 0v352h352a32 32 0 1 1 0 64H544v352a32 32 0 1 1-64 0V544H128a32 32 0 0 1 0-64h352z"/></svg></el-icon>
+            <el-icon>
+              <svg
+                viewBox="0 0 1024 1024"
+                xmlns="http://www.w3.org/2000/svg"
+              ><path
+                fill="currentColor"
+                d="M480 480V128a32 32 0 0 1 64 0v352h352a32 32 0 1 1 0 64H544v352a32 32 0 1 1-64 0V544H128a32 32 0 0 1 0-64h352z"
+              /></svg>
+            </el-icon>
           </el-button>
         </el-tooltip>
       </div>
       
-      <div v-if="!sidebarCollapsed" class="chat-sidebar__list" v-loading="loadingSessions">
+      <div
+        v-if="!sidebarCollapsed"
+        v-loading="loadingSessions"
+        class="chat-sidebar__list"
+      >
         <div
           v-for="session in sessions"
           :key="session.id"
@@ -198,7 +219,9 @@ watch(
           @click="handleSessionClick(session.id)"
         >
           <div class="chat-sidebar__item-content">
-            <div class="chat-sidebar__item-title">{{ session.title }}</div>
+            <div class="chat-sidebar__item-title">
+              {{ session.title }}
+            </div>
             <div class="chat-sidebar__item-meta">
               {{ session.message_count }} 条消息 · 
               {{ new Date(session.updated_at).toLocaleDateString() }}
@@ -233,8 +256,8 @@ watch(
       <div class="chat-sidebar__toggle">
         <el-button 
           text 
-          @click="toggleSidebar"
           :icon="sidebarCollapsed ? 'ArrowRight' : 'ArrowLeft'"
+          @click="toggleSidebar"
         >
           {{ sidebarCollapsed ? '' : '收起' }}
         </el-button>
@@ -243,23 +266,42 @@ watch(
 
     <!-- Main Chat Area -->
     <div class="chat-main">
-      <el-card class="chat__card" shadow="never">
+      <el-card
+        class="chat__card"
+        shadow="never"
+      >
         <template #header>
           <div class="chat__header">
             <div class="chat__header-left">
               <el-button 
                 text 
-                @click="handleBack"
                 class="chat__back-button"
+                @click="handleBack"
               >
-                <el-icon><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M224 480h640a32 32 0 1 1 0 64H224a32 32 0 0 1 0-64z"/><path fill="currentColor" d="m237.248 512 265.408 265.344a32 32 0 0 1-45.312 45.312l-288-288a32 32 0 0 1 0-45.312l288-288a32 32 0 1 1 45.312 45.312L237.248 512z"/></svg></el-icon>
+                <el-icon>
+                  <svg
+                    viewBox="0 0 1024 1024"
+                    xmlns="http://www.w3.org/2000/svg"
+                  ><path
+                    fill="currentColor"
+                    d="M224 480h640a32 32 0 1 1 0 64H224a32 32 0 0 1 0-64z"
+                  /><path
+                    fill="currentColor"
+                    d="m237.248 512 265.408 265.344a32 32 0 0 1-45.312 45.312l-288-288a32 32 0 0 1 0-45.312l288-288a32 32 0 1 1 45.312 45.312L237.248 512z"
+                  /></svg>
+                </el-icon>
                 返回
               </el-button>
               <div>
-                <h2 class="chat__title">AI 聊天助手</h2>
+                <h2 class="chat__title">
+                  AI 聊天助手
+                </h2>
                 <p class="chat__subtitle">
                   {{ auth.user?.nickname }} · 基于阿里云百炼 Qwen 模型
-                  <span v-if="currentSessionId" class="chat__session-id">
+                  <span
+                    v-if="currentSessionId"
+                    class="chat__session-id"
+                  >
                     · 会话 #{{ currentSessionId }}
                   </span>
                 </p>
@@ -268,8 +310,14 @@ watch(
           </div>
         </template>
 
-        <div class="chat__container" ref="chatContainer">
-          <div v-if="messages.length === 0" class="chat__empty">
+        <div
+          ref="chatContainer"
+          class="chat__container"
+        >
+          <div
+            v-if="messages.length === 0"
+            class="chat__empty"
+          >
             <el-empty description="还没有消息，开始对话吧" />
           </div>
 
@@ -286,9 +334,14 @@ watch(
             <div class="chat__message-content">
               <div class="chat__message-role">
                 {{ msg.role === 'user' ? '用户' : 'AI 助手' }}
-                <span v-if="msg.isStreaming" class="chat__streaming-indicator">正在输入...</span>
+                <span
+                  v-if="msg.isStreaming"
+                  class="chat__streaming-indicator"
+                >正在输入...</span>
               </div>
-              <div class="chat__message-text">{{ msg.content }}</div>
+              <div class="chat__message-text">
+                {{ msg.content }}
+              </div>
             </div>
           </div>
         </div>
@@ -315,7 +368,10 @@ watch(
               @keydown.enter.meta="handleSend"
             />
             <div class="chat__actions">
-              <el-text size="small" type="info">
+              <el-text
+                size="small"
+                type="info"
+              >
                 按 Ctrl+Enter 或 Command+Enter 发送
               </el-text>
               <div class="chat__buttons">

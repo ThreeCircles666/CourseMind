@@ -22,30 +22,72 @@ onMounted(() => {
 
 <template>
   <div class="home">
-    <el-card class="home__card" shadow="never">
+    <el-card
+      class="home__card"
+      shadow="never"
+    >
       <template #header>
         <div class="home__header">
           <div>
-            <h1 class="home__title">{{ projectName }}</h1>
-            <p class="home__welcome">欢迎，{{ auth.user?.nickname }}</p>
+            <h1 class="home__title">
+              {{ projectName }}
+            </h1>
+            <p class="home__welcome">
+              欢迎，{{ auth.user?.nickname }}
+            </p>
           </div>
           <div class="home__header-actions">
-            <el-tag type="info" effect="plain">{{ teamName }}</el-tag>
-            <el-button link @click="handleSignOut">退出登录</el-button>
+            <el-tag
+              type="info"
+              effect="plain"
+            >
+              {{ teamName }}
+            </el-tag>
+            <el-button
+              link
+              @click="handleSignOut"
+            >
+              退出登录
+            </el-button>
           </div>
         </div>
       </template>
 
-      <el-descriptions :column="1" border>
+      <el-descriptions
+        :column="1"
+        border
+      >
         <el-descriptions-item label="前端运行状态">
-          <el-tag type="success">运行中</el-tag>
+          <el-tag type="success">
+            运行中
+          </el-tag>
         </el-descriptions-item>
 
         <el-descriptions-item label="后端连接状态">
-          <el-tag v-if="backendStatus === 'loading'" type="warning">连接中…</el-tag>
-          <el-tag v-else-if="backendStatus === 'success'" type="success">后端连接成功</el-tag>
-          <el-tag v-else-if="backendStatus === 'error'" type="danger">后端连接失败</el-tag>
-          <el-tag v-else type="info">未测试</el-tag>
+          <el-tag
+            v-if="backendStatus === 'loading'"
+            type="warning"
+          >
+            连接中…
+          </el-tag>
+          <el-tag
+            v-else-if="backendStatus === 'success'"
+            type="success"
+          >
+            后端连接成功
+          </el-tag>
+          <el-tag
+            v-else-if="backendStatus === 'error'"
+            type="danger"
+          >
+            后端连接失败
+          </el-tag>
+          <el-tag
+            v-else
+            type="info"
+          >
+            未测试
+          </el-tag>
         </el-descriptions-item>
       </el-descriptions>
 
@@ -57,7 +99,10 @@ onMounted(() => {
         >
           重新测试后端连接
         </el-button>
-        <el-button type="success" @click="$router.push('/chat')">
+        <el-button
+          type="success"
+          @click="$router.push('/chat')"
+        >
           进入聊天界面
         </el-button>
       </div>
@@ -68,9 +113,15 @@ onMounted(() => {
         :column="1"
         border
       >
-        <el-descriptions-item label="Service">{{ health.service }}</el-descriptions-item>
-        <el-descriptions-item label="Status">{{ health.status }}</el-descriptions-item>
-        <el-descriptions-item label="Version">{{ health.version }}</el-descriptions-item>
+        <el-descriptions-item label="Service">
+          {{ health.service }}
+        </el-descriptions-item>
+        <el-descriptions-item label="Status">
+          {{ health.status }}
+        </el-descriptions-item>
+        <el-descriptions-item label="Version">
+          {{ health.version }}
+        </el-descriptions-item>
       </el-descriptions>
 
       <el-alert
@@ -88,7 +139,12 @@ onMounted(() => {
             <li>端口是否正确，接口路径为 /api/v1/health。</li>
             <li>后端 CORS 是否允许当前前端来源。</li>
           </ul>
-          <p v-if="errorMessage" class="home__error-detail">错误详情：{{ errorMessage }}</p>
+          <p
+            v-if="errorMessage"
+            class="home__error-detail"
+          >
+            错误详情：{{ errorMessage }}
+          </p>
         </template>
       </el-alert>
     </el-card>

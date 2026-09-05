@@ -6,6 +6,7 @@ CORS origins and the database URL are not scattered across business code.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -45,13 +46,37 @@ class Settings(BaseSettings):
     # MUST be set via environment variable, never hardcode.
     dashscope_api_key: str = Field(default="")
 
+    # Embedding configuration
+    embedding_provider: str = Field(default="dashscope")
+    embedding_model: str = Field(default="text-embedding-v3")
+    embedding_timeout_seconds: float = Field(default=60.0, ge=1.0, le=300.0)
+    embedding_max_retries: int = Field(default=3, ge=1, le=10)
+    embedding_trust_env: bool = Field(default=True)
+
+    # RAG configuration
+    rag_min_similarity: float = Field(default=0.3, ge=0.0, le=1.0)
+    rag_chat_model: str = Field(default="qwen3.8-flash")
+    rag_max_context_chars: int = Field(default=12000, ge=1000, le=50000)
+    rag_max_excerpt_chars: int = Field(default=300, ge=50, le=1000)
+
+    # File upload configuration
+    upload_root: str = Field(default="data/uploads")
+    upload_text_max_bytes: int = Field(default=10 * 1024 * 1024)
+    upload_pdf_max_bytes: int = Field(default=50 * 1024 * 1024)
+    upload_max_bytes: int = Field(default=50 * 1024 * 1024)
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
+    def get_upload_root_path(self) -> Path:
+        """Return the upload root, resolving relative paths from ``backend``."""
+        backend_dir = Path(__file__).resolve().parents[2]
+        return (backend_dir / self.upload_root).resolve()
+
     def validate_dashscope_key(self) -> None:
         """Validate that DashScope API key is configured.
-        
+
         Raises:
             ValueError: If API key is not set.
         """
@@ -64,10 +89,10 @@ class Settings(BaseSettings):
 
     def get_dashscope_key(self) -> str:
         """Get DashScope API key from settings or environment.
-        
+
         Returns:
             str: The API key.
-            
+
         Raises:
             ValueError: If API key is not set.
         """

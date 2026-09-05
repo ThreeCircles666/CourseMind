@@ -57,13 +57,24 @@ function switchMode() {
 
 <template>
   <div class="auth">
-    <el-card class="auth__card" shadow="hover">
+    <el-card
+      class="auth__card"
+      shadow="hover"
+    >
       <template #header>
-        <h2 class="auth__title">{{ isLogin ? '登录' : '注册' }}</h2>
+        <h2 class="auth__title">
+          {{ isLogin ? '登录' : '注册' }}
+        </h2>
       </template>
 
-      <el-form @submit.prevent="handleSubmit" label-position="top">
-        <el-form-item label="用户名" required>
+      <el-form
+        label-position="top"
+        @submit.prevent="handleSubmit"
+      >
+        <el-form-item
+          label="用户名"
+          required
+        >
           <el-input
             v-model="username"
             placeholder="3-32个字符，字母、数字或下划线"
@@ -72,7 +83,11 @@ function switchMode() {
           />
         </el-form-item>
 
-        <el-form-item v-if="!isLogin" label="昵称" required>
+        <el-form-item
+          v-if="!isLogin"
+          label="昵称"
+          required
+        >
           <el-input
             v-model="nickname"
             placeholder="显示名称"
@@ -81,7 +96,10 @@ function switchMode() {
           />
         </el-form-item>
 
-        <el-form-item label="密码" required>
+        <el-form-item
+          label="密码"
+          required
+        >
           <el-input
             v-model="password"
             type="password"
@@ -112,7 +130,10 @@ function switchMode() {
         </el-button>
 
         <div class="auth__switch">
-          <el-button link @click="switchMode">
+          <el-button
+            link
+            @click="switchMode"
+          >
             {{ isLogin ? '没有账户，去注册' : '已有账户，去登录' }}
           </el-button>
         </div>

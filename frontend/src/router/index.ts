@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import IndexView from '@/views/IndexView.vue'
 import AboutView from '@/views/AboutView.vue'
 import ChatView from '@/views/ChatView.vue'
+import DocumentsView from '@/views/DocumentsView.vue'
+import KnowledgeAskView from '@/views/KnowledgeAskView.vue'
 import AuthView from '@/views/AuthView.vue'
 import { useAuthStore } from '@/stores/auth'
 
@@ -11,6 +13,8 @@ const router = createRouter({
     { path: '/', name: 'index', component: IndexView, meta: { requiresAuth: true } },
     { path: '/about', name: 'about', component: AboutView, meta: { requiresAuth: true } },
     { path: '/chat', name: 'chat', component: ChatView, meta: { requiresAuth: true } },
+    { path: '/documents', name: 'documents', component: DocumentsView, meta: { requiresAuth: true } },
+    { path: '/knowledge-ask', name: 'knowledge-ask', component: KnowledgeAskView, meta: { requiresAuth: true } },
     { path: '/login', name: 'login', component: AuthView, meta: { guestOnly: true } },
     { path: '/register', name: 'register', component: AuthView, meta: { guestOnly: true } },
   ],

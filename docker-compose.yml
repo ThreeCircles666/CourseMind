@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     container_name: coursemind-postgres
     restart: unless-stopped
     environment:
@@ -19,3 +19,5 @@ services:
 
 volumes:
   coursemind-postgres-data:
+    external: true
+    name: ban_coursemind_postgres_data

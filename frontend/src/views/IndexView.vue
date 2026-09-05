@@ -9,6 +9,14 @@ function goToChat() {
   router.push('/chat')
 }
 
+function goToDocuments() {
+  router.push('/documents')
+}
+
+function goToKnowledgeAsk() {
+  router.push('/knowledge-ask')
+}
+
 function goToAbout() {
   router.push('/about')
 }
@@ -24,17 +32,24 @@ function handleLogout() {
     <el-container class="index-container">
       <el-header class="index-header">
         <div class="header-content">
-          <h1 class="app-title">CourseMind</h1>
+          <h1 class="app-title">
+            CourseMind
+          </h1>
           <el-dropdown @command="handleLogout">
             <el-button text>
-              <el-avatar :size="32" class="user-avatar">
+              <el-avatar
+                :size="32"
+                class="user-avatar"
+              >
                 {{ auth.user?.nickname?.charAt(0) || 'U' }}
               </el-avatar>
               <span class="username">{{ auth.user?.nickname }}</span>
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+                <el-dropdown-item command="logout">
+                  退出登录
+                </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -44,42 +59,183 @@ function handleLogout() {
       <el-main class="index-main">
         <div class="welcome-section">
           <div class="welcome-card">
-            <el-icon :size="64" color="#409EFF" class="welcome-icon">
-              <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-                <path fill="currentColor" d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"/>
-                <path fill="currentColor" d="M464 336a48 48 0 1 0 96 0 48 48 0 1 0-96 0zm72 112h-48c-4.4 0-8 3.6-8 8v272c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8V456c0-4.4-3.6-8-8-8z"/>
+            <el-icon
+              :size="64"
+              color="#409EFF"
+              class="welcome-icon"
+            >
+              <svg
+                viewBox="0 0 1024 1024"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill="currentColor"
+                  d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M464 336a48 48 0 1 0 96 0 48 48 0 1 0-96 0zm72 112h-48c-4.4 0-8 3.6-8 8v272c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8V456c0-4.4-3.6-8-8-8z"
+                />
               </svg>
             </el-icon>
-            <h2 class="welcome-title">欢迎回来，{{ auth.user?.nickname }}！</h2>
-            <p class="welcome-subtitle">选择下方功能开始使用 CourseMind</p>
+            <h2 class="welcome-title">
+              欢迎回来，{{ auth.user?.nickname }}！
+            </h2>
+            <p class="welcome-subtitle">
+              选择下方功能开始使用 CourseMind
+            </p>
           </div>
 
           <div class="features-grid">
-            <el-card shadow="hover" class="feature-card" @click="goToChat">
+            <el-card
+              shadow="hover"
+              class="feature-card"
+              @click="goToKnowledgeAsk"
+            >
               <div class="feature-content">
-                <el-icon :size="48" color="#409EFF" class="feature-icon">
-                  <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-                    <path fill="currentColor" d="M273.536 736H800a64 64 0 0 0 64-64V256a64 64 0 0 0-64-64H224a64 64 0 0 0-64 64v570.88L273.536 736zM296 800 147.968 918.4A32 32 0 0 1 96 893.44V256a128 128 0 0 1 128-128h576a128 128 0 0 1 128 128v416a128 128 0 0 1-128 128H296z"/>
-                    <path fill="currentColor" d="M512 499.2a51.2 51.2 0 1 1 0-102.4 51.2 51.2 0 0 1 0 102.4zm192 0a51.2 51.2 0 1 1 0-102.4 51.2 51.2 0 0 1 0 102.4zm-384 0a51.2 51.2 0 1 1 0-102.4 51.2 51.2 0 0 1 0 102.4z"/>
+                <el-icon
+                  :size="48"
+                  color="#8B5CF6"
+                  class="feature-icon"
+                >
+                  <svg
+                    viewBox="0 0 1024 1024"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      fill="currentColor"
+                      d="M832 128H256a96 96 0 0 0-96 96v448a96 96 0 0 0 96 96h128l128 128 128-128h192a96 96 0 0 0 96-96V224a96 96 0 0 0-96-96zM480 640h64v64h-64v-64zm96-192c-32 24-48 40-48 96h-64c0-88 32-120 72-152 25-20 40-34 40-64 0-38-29-64-72-64-45 0-73 24-80 67l-63-11c12-71 67-110 143-110 81 0 136 47 136 116 0 58-31 88-64 112z"
+                    />
                   </svg>
                 </el-icon>
-                <h3 class="feature-title">AI 对话</h3>
-                <p class="feature-desc">与智能助手进行自然对话，获取学习辅导和问题解答</p>
-                <el-button type="primary" class="feature-button">开始对话</el-button>
+                <h3 class="feature-title">
+                  知识库问答
+                </h3>
+                <p class="feature-desc">
+                  选择已上传资料进行问答，并查看答案的引用来源
+                </p>
+                <el-button
+                  color="#8B5CF6"
+                  class="feature-button"
+                >
+                  开始提问
+                </el-button>
               </div>
             </el-card>
 
-            <el-card shadow="hover" class="feature-card" @click="goToAbout">
+            <el-card
+              shadow="hover"
+              class="feature-card"
+              @click="goToChat"
+            >
               <div class="feature-content">
-                <el-icon :size="48" color="#67C23A" class="feature-icon">
-                  <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-                    <path fill="currentColor" d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"/>
-                    <path fill="currentColor" d="M464 336a48 48 0 1 0 96 0 48 48 0 1 0-96 0zm72 112h-48c-4.4 0-8 3.6-8 8v272c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8V456c0-4.4-3.6-8-8-8z"/>
+                <el-icon
+                  :size="48"
+                  color="#409EFF"
+                  class="feature-icon"
+                >
+                  <svg
+                    viewBox="0 0 1024 1024"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      fill="currentColor"
+                      d="M273.536 736H800a64 64 0 0 0 64-64V256a64 64 0 0 0-64-64H224a64 64 0 0 0-64 64v570.88L273.536 736zM296 800 147.968 918.4A32 32 0 0 1 96 893.44V256a128 128 0 0 1 128-128h576a128 128 0 0 1 128 128v416a128 128 0 0 1-128 128H296z"
+                    />
+                    <path
+                      fill="currentColor"
+                      d="M512 499.2a51.2 51.2 0 1 1 0-102.4 51.2 51.2 0 0 1 0 102.4zm192 0a51.2 51.2 0 1 1 0-102.4 51.2 51.2 0 0 1 0 102.4zm-384 0a51.2 51.2 0 1 1 0-102.4 51.2 51.2 0 0 1 0 102.4z"
+                    />
                   </svg>
                 </el-icon>
-                <h3 class="feature-title">关于项目</h3>
-                <p class="feature-desc">了解 CourseMind 的功能介绍和使用说明</p>
-                <el-button type="success" class="feature-button">查看详情</el-button>
+                <h3 class="feature-title">
+                  AI 对话
+                </h3>
+                <p class="feature-desc">
+                  与智能助手进行自然对话，获取学习辅导和问题解答
+                </p>
+                <el-button
+                  type="primary"
+                  class="feature-button"
+                >
+                  开始对话
+                </el-button>
+              </div>
+            </el-card>
+
+            <el-card
+              shadow="hover"
+              class="feature-card"
+              @click="goToDocuments"
+            >
+              <div class="feature-content">
+                <el-icon
+                  :size="48"
+                  color="#E6A23C"
+                  class="feature-icon"
+                >
+                  <svg
+                    viewBox="0 0 1024 1024"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      fill="currentColor"
+                      d="M832 384H576V128H192v768h640V384zm-26.496-64L640 154.496V320h165.504zM160 64h480l256 256v608a32 32 0 0 1-32 32H160a32 32 0 0 1-32-32V96a32 32 0 0 1 32-32zm160 448h384v64H320v-64zm0-192h160v64H320v-64zm0 384h384v64H320v-64z"
+                    />
+                  </svg>
+                </el-icon>
+                <h3 class="feature-title">
+                  知识库
+                </h3>
+                <p class="feature-desc">
+                  上传和管理文档，支持 TXT、Markdown、PDF 格式
+                </p>
+                <el-button
+                  type="warning"
+                  class="feature-button"
+                >
+                  管理文档
+                </el-button>
+              </div>
+            </el-card>
+
+            <el-card
+              shadow="hover"
+              class="feature-card"
+              @click="goToAbout"
+            >
+              <div class="feature-content">
+                <el-icon
+                  :size="48"
+                  color="#67C23A"
+                  class="feature-icon"
+                >
+                  <svg
+                    viewBox="0 0 1024 1024"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      fill="currentColor"
+                      d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"
+                    />
+                    <path
+                      fill="currentColor"
+                      d="M464 336a48 48 0 1 0 96 0 48 48 0 1 0-96 0zm72 112h-48c-4.4 0-8 3.6-8 8v272c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8V456c0-4.4-3.6-8-8-8z"
+                    />
+                  </svg>
+                </el-icon>
+                <h3 class="feature-title">
+                  关于项目
+                </h3>
+                <p class="feature-desc">
+                  了解 CourseMind 的功能介绍和使用说明
+                </p>
+                <el-button
+                  type="success"
+                  class="feature-button"
+                >
+                  查看详情
+                </el-button>
               </div>
             </el-card>
           </div>
