@@ -56,7 +56,7 @@ class FakeChatProvider(ChatProvider):
         self.last_system_prompt = system_prompt
         self.last_user_prompt = user_prompt
         return ChatResult(
-            text="Fake answer with citation [S1]",
+            text='{"status":"answered","answer":"Fake answer with citation [S1]"}',
             model=self.model_name,
             finish_reason="stop",
         )

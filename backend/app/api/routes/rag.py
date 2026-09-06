@@ -24,6 +24,7 @@ from app.services.rag import (
     RagValidationError,
     RagRetrievalError,
     InvalidCitationError,
+    InvalidAnswerError,
 )
 from app.services.retrieval import RetrievalError, InvalidQueryError
 
@@ -171,6 +172,9 @@ async def ask_question(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
             detail="RAG request timed out",
         )
+
+    except InvalidAnswerError:
+        raise HTTPException(status_code=502, detail="AI response format is invalid")
 
     except InvalidCitationError as e:
         logger.warning(f"Invalid citation: {e}")

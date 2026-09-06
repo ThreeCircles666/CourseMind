@@ -92,32 +92,31 @@ class DashScopeEmbeddingProvider(EmbeddingProvider):
         if not non_empty_texts:
             raise ValueError("All input texts are empty or whitespace")
 
-        # Call API with retry logic
+        # The v3/v4 synchronous API accepts at most ten texts per request.
+        # Keep results local until every batch succeeds: callers must never
+        # receive partial embeddings and replace their existing chunks.
+        vectors: list[list[float]] = []
+        model: str | None = None
+        dimension: int | None = None
+        for start in range(0, len(non_empty_texts), 10):
+            result = await self._call_with_retry(non_empty_texts[start:start + 10])
+            if model is not None and (
+                result["model"] != model or result["dimension"] != dimension
+            ):
+                raise EmbeddingServiceError("Inconsistent model or dimension across batches")
+            model, dimension = result["model"], result["dimension"]
+            vectors.extend(result["embeddings"])
+
+        full_vectors = [[0.0] * dimension for _ in texts]
+        for index, vector in zip(non_empty_indices, vectors, strict=True):
+            full_vectors[index] = vector
+        return EmbeddingResult(vectors=full_vectors, model=model, dimension=dimension)
+
+    async def _call_with_retry(self, texts: list[str]) -> dict[str, Any]:
+        """Retry only the failed batch, without resending successful batches."""
         for attempt in range(self._max_retries):
             try:
-                result = await self._call_api(non_empty_texts)
-
-                # Reconstruct full results with None for empty inputs
-                full_vectors: list[list[float]] = []
-                non_empty_iter = iter(result["embeddings"])
-
-                for i in range(len(texts)):
-                    if i in non_empty_indices:
-                        full_vectors.append(next(non_empty_iter))
-                    else:
-                        # For empty inputs, use zero vector (should be validated/rejected later if needed)
-                        if full_vectors:
-                            dim = len(full_vectors[0])
-                        else:
-                            # This shouldn't happen since we have at least one non-empty text
-                            dim = result["dimension"]
-                        full_vectors.append([0.0] * dim)
-
-                return EmbeddingResult(
-                    vectors=full_vectors,
-                    model=result["model"],
-                    dimension=result["dimension"],
-                )
+                return await self._call_api(texts)
 
             except (EmbeddingAuthError, ValueError):
                 # Don't retry auth errors or validation errors

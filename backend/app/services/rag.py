@@ -5,6 +5,7 @@ Orchestrates retrieval, context assembly, and AI generation.
 from __future__ import annotations
 
 import logging
+import json
 import re
 from uuid import UUID
 
@@ -47,6 +48,10 @@ class RagContextError(RagError):
 class InvalidCitationError(RagError):
     """Invalid citation in model output."""
     pass
+
+
+class InvalidAnswerError(RagError):
+    """Model output does not satisfy the RAG answer protocol."""
 
 
 class RagService:
@@ -185,40 +190,40 @@ class RagService:
 
         logger.info(f"Generated answer: {len(result.text)} chars")
 
-        # Step 6: Extract and validate citations
+        # Retrieval relevance is not evidence sufficiency. Require the model
+        # to report a separate, machine-readable answer status.
+        if result.finish_reason not in (None, "stop"):
+            raise InvalidAnswerError("Incomplete model response")
         try:
-            citation_ids = self._extract_citation_ids(result.text)
-            available_ids = {src.source_id for src in sources}
-            self._validate_citations(citation_ids, available_ids)
-
-            # Filter sources to only cited ones
-            cited_sources = [
-                src for src in sources
-                if src.source_id in citation_ids
-            ]
-
-            logger.info(
-                f"Citations validated: {len(citation_ids)} unique, "
-                f"{len(cited_sources)} sources"
-            )
-
+            output = json.loads(result.text)
+        except (ValueError, TypeError):
+            raise InvalidAnswerError("Expected a JSON answer") from None
+        if (
+            not isinstance(output, dict)
+            or set(output) != {"status", "answer"}
+            or output.get("status") not in ("answered", "partial", "insufficient")
+            or not isinstance(output.get("answer"), str)
+            or not output["answer"].strip()
+        ):
+            raise InvalidAnswerError("Invalid answer fields")
+        if output["status"] == "insufficient":
             return RagAskResponse(
-                answer=result.text,
-                sources=cited_sources if cited_sources else sources,
-                model=result.model,
-                insufficient_context=False,
+                answer=INSUFFICIENT_CONTEXT_ANSWER, sources=[],
+                model=result.model, insufficient_context=True,
             )
-
-        except InvalidCitationError as e:
-            logger.warning(f"Invalid citations: {e}")
-            # For now, return all sources if citation validation fails
-            # Future: implement retry or stricter error handling
-            return RagAskResponse(
-                answer=result.text,
-                sources=sources,
-                model=result.model,
-                insufficient_context=False,
-            )
+        answer = output["answer"].strip()
+        citation_ids = self._extract_citation_ids(answer)
+        if not citation_ids:
+            raise InvalidCitationError("An evidence-based answer requires citations")
+        self._validate_citations(citation_ids, {src.source_id for src in sources})
+        return RagAskResponse(
+            answer=answer,
+            sources=[src for src in sources if src.source_id in citation_ids],
+            model=result.model,
+            # Partial answers retain grounded facts and citations, but signal
+            # that the requested information is not fully available.
+            insufficient_context=output["status"] == "partial",
+        )
 
     def _build_context(
         self,
@@ -303,7 +308,14 @@ class RagService:
 4. 每个事实性结论必须使用[S1]、[S2]等来源编号标注。
 5. 只能引用本次提供的来源编号。
 6. 不得编造来源、页码、文件名或引用。
-7. 不输出隐藏思维过程，只输出简洁答案和必要依据。"""
+7. 不输出隐藏思维过程。
+8. 只输出一个 JSON 对象，不要 Markdown 代码围栏，且只包含 status 和 answer 两个字段。
+   status 必须是 answered、partial、insufficient 之一。
+   answered：资料足以回答所有问题，answer 包含答案及事实对应的来源编号。
+   partial：只能回答部分问题，answer 对有依据的事实注明来源，明确指出哪些信息未提供，不推测；不能将缺失信息标为有来源。
+   insufficient：资料无法回答问题，即使检索片段主题相关也必须使用此状态；answer 为“现有文档不足以回答该问题。”，不要引用。
+   示例：{"status":"answered","answer":"该部分不考[S1]。"}
+   示例：{"status":"insufficient","answer":"现有文档不足以回答该问题。"}"""
 
     def _build_user_prompt(self, context: str, question: str) -> str:
         """Build user prompt with context and question.

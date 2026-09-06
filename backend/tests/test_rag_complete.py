@@ -1,5 +1,6 @@
 """Complete RAG service tests."""
 import pytest
+import json
 from uuid import uuid4
 from unittest.mock import AsyncMock
 
@@ -39,7 +40,7 @@ class FakeChatProvider:
             else:
                 raise RuntimeError("Unknown error")
 
-        return ChatResult(text=self.response, model="fake-model")
+        return ChatResult(text=json.dumps({"status": "answered", "answer": self.response}), model="fake-model")
 
 
 class FakeEmbeddingProvider:
@@ -324,11 +325,10 @@ async def test_invalid_citation_rejected():
             document_ids=[uuid4()],
         )
 
-        # Should handle gracefully (returns all sources as fallback)
-        response = await service.answer(
-            session=None, request=request, current_user_id=uuid4()
-        )
-        assert len(response.sources) > 0
+        with pytest.raises(InvalidCitationError):
+            await service.answer(
+                session=None, request=request, current_user_id=uuid4()
+            )
 
 
 # Context Budget Tests

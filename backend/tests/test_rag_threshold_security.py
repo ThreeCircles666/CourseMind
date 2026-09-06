@@ -49,7 +49,7 @@ class FakeChatProvider(ChatProvider):
         """Track calls and return fake answer."""
         self.call_count += 1
         return ChatResult(
-            text="Fake answer with citation [S1]",
+            text='{"status":"answered","answer":"Fake answer with citation [S1]"}',
             model=self.model_name,
             finish_reason="stop",
         )
