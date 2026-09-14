@@ -200,11 +200,11 @@ cd backend
 
 ## Documents
 
-- [Docker Quick Start](DOCKER_QUICKSTART.md)
-- [Demo Script](DEMO_SCRIPT.md)
-- [Demo Checklist](DEMO_CHECKLIST.md)
-- [Project Summary](SUBMISSION_SUMMARY.md)
-- [Developer Guide](docs/DEVELOPER_GUIDE.md)
+- [Docker Quick Start](DOCKER_QUICKSTART.en.md)
+- [Demo Script](DEMO_SCRIPT.en.md)
+- [Demo Checklist](DEMO_CHECKLIST.en.md)
+- [Project Summary](SUBMISSION_SUMMARY.en.md)
+- [Developer Guide](docs/DEVELOPER_GUIDE.en.md)
 
 ## License
 
