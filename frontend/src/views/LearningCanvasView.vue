@@ -193,8 +193,8 @@ async function generateCanvas() {
 
   try {
     const prompt = isChineseLocale.value
-      ? `请基于这份课件，提炼 6-10 个最适合复习的知识点。只输出 JSON 数组，不要输出额外说明。每一项字段为：title、summary、tag、sourceIndex。tag 只能是 definition、formula、example、mistake、exam 之一。summary 要适合学生复习，sourceIndex 使用最相关来源的序号，从 1 开始。`
-      : `Based on this course material, extract 6-10 key concepts for review. Output only a JSON array with no extra commentary. Each item must include: title, summary, tag, sourceIndex. tag must be one of definition, formula, example, mistake, exam. The summary should be suitable for student review, and sourceIndex should reference the most relevant source using a 1-based index.`
+      ? `请基于这份课件，提炼 6-10 个最适合复习的知识点。请用编号列表输出，每条格式为“标题：适合学生复习的一句话摘要 [S来源编号]”。可以在标题或摘要中自然体现定义、公式、例子、易错点或考点类型。每条都必须引用最相关的来源编号。`
+      : `Based on this course material, extract 6-10 key concepts for review. Use a numbered list. Each item must follow this format: "Title: one review-friendly sentence [source id]". Naturally indicate whether it is a definition, formula, example, mistake, or exam focus when relevant. Every item must cite the most relevant source id.`
 
     const response = await askKnowledgeBase(
       prompt,
@@ -394,7 +394,7 @@ function parseAIResponse(answer: string, documentId: string, sources: RagSource[
       if (currentCard && currentCard.title) {
         cards.push(completeCard(currentCard, documentId, sources[cards.length % Math.max(sources.length, 1)]))
       }
-      currentCard = { title: line.replace(/^[\d]+[.、)]|^[•\-*]\s*/, '').trim() }
+      currentCard = parseListConceptLine(line)
     } else if (currentCard && line.trim()) {
       // Add to summary
       currentCard.summary = (currentCard.summary || '') + line.trim() + ' '
@@ -406,6 +406,25 @@ function parseAIResponse(answer: string, documentId: string, sources: RagSource[
   }
   
   return cards.slice(0, 10) // Limit to 10 cards
+}
+
+function parseListConceptLine(line: string): Partial<CanvasCard> {
+  const text = line
+    .replace(/^(?:[\d]+[.、)]|[•\-*])\s*/, '')
+    .replace(/\s*\[S\d+\]\s*/g, '')
+    .trim()
+  const separatorMatch = text.match(/[:：]/)
+
+  if (!separatorMatch || separatorMatch.index === undefined) {
+    return { title: text }
+  }
+
+  const title = text.slice(0, separatorMatch.index).trim()
+  const summary = text.slice(separatorMatch.index + 1).trim()
+  return {
+    title: title || text,
+    summary,
+  }
 }
 
 function parseStructuredCards(answer: string, documentId: string, sources: RagSource[]): CanvasCard[] {

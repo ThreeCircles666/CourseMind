@@ -194,10 +194,7 @@ class RagService:
         # to report a separate, machine-readable answer status.
         if result.finish_reason not in (None, "stop"):
             raise InvalidAnswerError("Incomplete model response")
-        try:
-            output = json.loads(result.text)
-        except (ValueError, TypeError):
-            raise InvalidAnswerError("Expected a JSON answer") from None
+        output = self._parse_answer_payload(result.text)
         if (
             not isinstance(output, dict)
             or set(output) != {"status", "answer"}
@@ -338,6 +335,31 @@ class RagService:
 <user_question>
 {question_safe}
 </user_question>"""
+
+    def _parse_answer_payload(self, text: str) -> dict:
+        """Parse the model's JSON answer object from a strict or fenced response."""
+        try:
+            output = json.loads(text)
+        except (ValueError, TypeError):
+            json_text = self._extract_json_object(text)
+            if not json_text:
+                raise InvalidAnswerError("Expected a JSON answer") from None
+            try:
+                output = json.loads(json_text)
+            except (ValueError, TypeError):
+                raise InvalidAnswerError("Expected a JSON answer") from None
+        return output
+
+    def _extract_json_object(self, text: str) -> str:
+        fenced_json = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text, re.IGNORECASE)
+        if fenced_json:
+            return fenced_json.group(1)
+
+        start = text.find("{")
+        end = text.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            return ""
+        return text[start:end + 1]
 
     def _extract_citation_ids(self, answer: str) -> list[str]:
         """Extract citation IDs from answer.

@@ -49,6 +49,13 @@ def test_only_cited_evidence_returned(monkeypatch, status):
     assert [s.source_id for s in result.sources] == ["S2"]
 
 
+def test_fenced_json_answer_is_accepted(monkeypatch):
+    text = '```json\n{"status":"answered","answer":"核心概念可以这样复习[S1]。"}\n```'
+    result = run_answer(monkeypatch, text)
+    assert result.answer == "核心概念可以这样复习[S1]。"
+    assert [s.source_id for s in result.sources] == ["S1"]
+
+
 @pytest.mark.parametrize("text", [
     "现有文档不足以回答该问题。", "not json", "[]",
     '{"status":"unknown","answer":"x"}',

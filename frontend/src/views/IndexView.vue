@@ -2,11 +2,10 @@
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { SUPPORTED_LOCALES, LOCALE_NAMES, setLocale, type SupportedLocale } from '@/i18n'
 
 const auth = useAuthStore()
 const router = useRouter()
-const { t, locale } = useI18n()
+const { t } = useI18n()
 
 function goToChat() {
   router.push('/chat')
@@ -35,9 +34,6 @@ function handleCommand(command: string) {
   }
 }
 
-function handleLocaleChange(newLocale: SupportedLocale) {
-  setLocale(newLocale)
-}
 </script>
 
 <template>
@@ -49,18 +45,6 @@ function handleLocaleChange(newLocale: SupportedLocale) {
             {{ t('common.appName') }}
           </h1>
           <div class="header-actions">
-            <el-select
-              :model-value="locale"
-              class="locale-selector"
-              @change="handleLocaleChange"
-            >
-              <el-option
-                v-for="loc in SUPPORTED_LOCALES"
-                :key="loc"
-                :label="LOCALE_NAMES[loc]"
-                :value="loc"
-              />
-            </el-select>
             <el-dropdown @command="handleCommand">
               <el-button text>
                 <el-avatar
