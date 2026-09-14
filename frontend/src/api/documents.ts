@@ -48,16 +48,17 @@ export async function uploadDocument(file: File): Promise<UploadResponse> {
     const detail = (body as { detail?: string }).detail
 
     if (response.status === 413) {
-      throw new Error('文件超过允许大小')
+      throw new Error('FILE_TOO_LARGE')
     }
     if (response.status === 415) {
-      throw new Error('暂不支持该文件类型')
+      // Return server detail if available, otherwise generic unsupported type
+      throw new Error(detail || 'UNSUPPORTED_FILE_TYPE')
     }
     if (response.status === 422) {
-      throw new Error(detail || '文件验证失败')
+      throw new Error(detail || 'VALIDATION_FAILED')
     }
 
-    throw new Error(detail || `上传失败：HTTP ${response.status}`)
+    throw new Error(detail || `UPLOAD_FAILED:${response.status}`)
   }
 
   return await response.json()
@@ -99,13 +100,13 @@ export async function deleteDocument(documentId: string): Promise<void> {
     const detail = (body as { detail?: string }).detail
 
     if (response.status === 404) {
-      throw new Error('文档不存在或无权访问')
+      throw new Error('DOCUMENT_NOT_FOUND')
     }
     if (response.status === 409) {
-      throw new Error('文档正在处理中，无法删除')
+      throw new Error('CANNOT_DELETE_PROCESSING')
     }
 
-    throw new Error(detail || `删除失败：HTTP ${response.status}`)
+    throw new Error(detail || `DELETE_FAILED:${response.status}`)
   }
 }
 
@@ -123,15 +124,15 @@ export async function reprocessDocument(documentId: string): Promise<void> {
     const detail = (body as { detail?: string }).detail
 
     if (response.status === 404) {
-      throw new Error('文档不存在或无权访问')
+      throw new Error('DOCUMENT_NOT_FOUND')
     }
     if (response.status === 409) {
-      throw new Error('文档正在处理或已成功，无需重新处理')
+      throw new Error('CANNOT_REPROCESS')
     }
     if (response.status === 400) {
-      throw new Error('文档文件缺失，无法重新处理')
+      throw new Error('FILE_NOT_FOUND')
     }
 
-    throw new Error(detail || `重新处理失败：HTTP ${response.status}`)
+    throw new Error(detail || `REPROCESS_FAILED:${response.status}`)
   }
 }

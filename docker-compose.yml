@@ -17,7 +17,81 @@ services:
       timeout: 5s
       retries: 10
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: coursemind-backend
+    restart: unless-stopped
+    environment:
+      # Database connection
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: coursemind
+      POSTGRES_USER: coursemind
+      POSTGRES_PASSWORD: coursemind_dev
+      DATABASE_URL: postgresql+psycopg://coursemind:coursemind_dev@postgres:5432/coursemind
+      
+      # App configuration
+      APP_NAME: courseguard-api
+      APP_VERSION: 0.1.0
+      API_PREFIX: /api/v1
+      CORS_ORIGINS: http://localhost:5174,http://127.0.0.1:5174
+      
+      # JWT configuration
+      JWT_SECRET_KEY: hackathon-demo-secret-key-change-in-production
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 15
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+      REFRESH_COOKIE_NAME: coursemind_refresh
+      COOKIE_SECURE: false
+      COOKIE_SAMESITE: lax
+      
+      # AI configuration (optional - app will work without it)
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      EMBEDDING_PROVIDER: dashscope
+      EMBEDDING_MODEL: text-embedding-v3
+      EMBEDDING_TIMEOUT_SECONDS: 60.0
+      EMBEDDING_MAX_RETRIES: 3
+      EMBEDDING_TRUST_ENV: true
+      
+      # RAG configuration
+      RAG_MIN_SIMILARITY: 0.3
+      RAG_CHAT_MODEL: qwen-turbo
+      RAG_MAX_CONTEXT_CHARS: 12000
+      RAG_MAX_EXCERPT_CHARS: 300
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/data/uploads:/app/data/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: coursemind-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ""
+      VITE_PROXY_TARGET: http://backend:8000
+    ports:
+      - "5174:5174"
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+
 volumes:
   coursemind-postgres-data:
-    external: true
-    name: ban_coursemind_postgres_data
+    driver: local

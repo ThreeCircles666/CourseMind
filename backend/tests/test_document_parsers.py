@@ -662,3 +662,102 @@ def test_pdf_three_pages_with_empty_middle():
         for chunk in page3_chunks:
             expected = doc.text[chunk.start_char:chunk.end_char]
             assert chunk.text == expected
+
+
+# ============================================================================
+# CID Font Encoding Tests
+# ============================================================================
+
+def test_pdf_cid_encoding_high_count():
+    """Test PDF with high CID count is rejected."""
+    from unittest.mock import MagicMock, patch
+
+    # Create text with 25 CID references
+    cid_text = "Normal text " + " ".join([f"(cid:{i})" for i in range(25)])
+    
+    parser = PdfParser()
+
+    with patch('app.parsers.pdf_parser.PdfReader') as mock_reader_class:
+        mock_reader = MagicMock()
+        mock_reader.is_encrypted = False
+
+        mock_page = MagicMock()
+        mock_page.extract_text.return_value = cid_text
+        mock_reader.pages = [mock_page]
+
+        mock_reader_class.return_value = mock_reader
+
+        with pytest.raises(PdfTextNotFoundError, match="font encoding"):
+            parser.parse(b"%PDF-1.4 fake", "test.pdf")
+
+
+def test_pdf_cid_encoding_high_ratio():
+    """Test PDF with high CID ratio is rejected."""
+    from unittest.mock import MagicMock, patch
+
+    # Short text with 5 CID references (>15% ratio)
+    cid_text = "(cid:123)(cid:456)(cid:789)(cid:012)(cid:345)"
+    
+    parser = PdfParser()
+
+    with patch('app.parsers.pdf_parser.PdfReader') as mock_reader_class:
+        mock_reader = MagicMock()
+        mock_reader.is_encrypted = False
+
+        mock_page = MagicMock()
+        mock_page.extract_text.return_value = cid_text
+        mock_reader.pages = [mock_page]
+
+        mock_reader_class.return_value = mock_reader
+
+        with pytest.raises(PdfTextNotFoundError, match="Text quality too poor"):
+            parser.parse(b"%PDF-1.4 fake", "test.pdf")
+
+
+def test_pdf_few_cid_references_accepted():
+    """Test PDF with few CID references is accepted."""
+    from unittest.mock import MagicMock, patch
+
+    # Long text with only 5 CID references (low ratio)
+    cid_text = "This is a normal PDF with mostly good text. " * 20
+    cid_text += "(cid:123) (cid:456) (cid:789)"
+    
+    parser = PdfParser()
+
+    with patch('app.parsers.pdf_parser.PdfReader') as mock_reader_class:
+        mock_reader = MagicMock()
+        mock_reader.is_encrypted = False
+
+        mock_page = MagicMock()
+        mock_page.extract_text.return_value = cid_text
+        mock_reader.pages = [mock_page]
+
+        mock_reader_class.return_value = mock_reader
+
+        # Should succeed
+        doc = parser.parse(b"%PDF-1.4 fake", "test.pdf")
+        assert "(cid:123)" in doc.text
+
+
+def test_pdf_short_text_with_cid_passes():
+    """Test short text (<200 chars) with CID is allowed to pass."""
+    from unittest.mock import MagicMock, patch
+
+    # Very short text with CID
+    cid_text = "(cid:123)(cid:456)(cid:789)"
+    
+    parser = PdfParser()
+
+    with patch('app.parsers.pdf_parser.PdfReader') as mock_reader_class:
+        mock_reader = MagicMock()
+        mock_reader.is_encrypted = False
+
+        mock_page = MagicMock()
+        mock_page.extract_text.return_value = cid_text
+        mock_reader.pages = [mock_page]
+
+        mock_reader_class.return_value = mock_reader
+
+        # Should succeed (text too short to reliably detect)
+        doc = parser.parse(b"%PDF-1.4 fake", "test.pdf")
+        assert "(cid:123)" in doc.text

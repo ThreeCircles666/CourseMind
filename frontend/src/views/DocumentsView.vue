@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { UploadRawFile, UploadUserFile } from 'element-plus'
 import * as documentsApi from '@/api/documents'
@@ -10,6 +11,7 @@ import type { Document } from '@/api/documents'
 type DocumentStatus = 'pending' | 'processing' | 'succeeded' | 'failed'
 
 const router = useRouter()
+const { t } = useI18n()
 const documents = ref<Document[]>([])
 const loading = ref(false)
 const uploading = ref(false)
@@ -18,11 +20,11 @@ const pollingTimers = new Map<string, number>()
 const POLLING_INTERVAL = 2000
 const MAX_POLLING_TIME = 5 * 60 * 1000 // 5 minutes
 
-const statusMap: Record<DocumentStatus, { text: string; type: 'info' | 'warning' | 'success' | 'danger' }> = {
-  pending: { text: '待处理', type: 'info' },
-  processing: { text: '处理中', type: 'warning' },
-  succeeded: { text: '成功', type: 'success' },
-  failed: { text: '失败', type: 'danger' },
+const statusMap: Record<DocumentStatus, { type: 'info' | 'warning' | 'success' | 'danger' }> = {
+  pending: { type: 'info' },
+  processing: { type: 'warning' },
+  succeeded: { type: 'success' },
+  failed: { type: 'danger' },
 }
 
 const mimeTypeMap: Record<string, string> = {
@@ -74,7 +76,7 @@ async function loadDocuments() {
       }
     })
   } catch (error) {
-    ElMessage.error('加载文档列表失败')
+    ElMessage.error(t('documents.errors.loadFailed'))
     console.error('Failed to load documents:', error)
   } finally {
     loading.value = false
@@ -125,29 +127,129 @@ function isFileTypeAllowed(file: UploadRawFile): boolean {
 }
 
 function beforeUpload(file: UploadRawFile): boolean {
+  const extension = getFileExtension(file.name)
+  
+  if (!extension) {
+    ElMessage.error(t('documents.errors.noExtension'))
+    return false
+  }
+  
+  if (!allowedExtensions.includes(extension)) {
+    ElMessage.error(t('documents.errors.unsupportedFormat', { ext: extension }))
+    return false
+  }
+
   if (!isFileTypeAllowed(file)) {
-    ElMessage.error('只支持 TXT、Markdown (.md/.markdown) 和 PDF 文件')
+    ElMessage.error(t('documents.errors.unsupportedFormat', { ext: extension }))
     return false
   }
 
   const maxSize = getMaxSizeForFile(file)
   if (maxSize === 0) {
-    ElMessage.error('无法确定文件大小限制')
+    ElMessage.error(t('documents.errors.sizeCheckFailed'))
     return false
   }
 
   if (file.size > maxSize) {
     const sizeMB = Math.round(maxSize / 1024 / 1024)
-    ElMessage.error(`文件大小超过 ${sizeMB}MB 限制`)
+    ElMessage.error(t('documents.errors.fileTooLarge', { size: sizeMB }))
     return false
   }
 
   return true
 }
 
+function translateErrorMessage(error: Error): string {
+  const message = error.message
+  
+  // Handle error codes from API
+  if (message === 'FILE_TOO_LARGE') {
+    return t('documents.errors.fileTooLarge', { size: 50 })
+  }
+  if (message === 'UNSUPPORTED_FILE_TYPE') {
+    return t('documents.errors.unsupportedType')
+  }
+  if (message === 'DOCUMENT_NOT_FOUND') {
+    return t('documents.errors.documentNotFound')
+  }
+  if (message === 'CANNOT_DELETE_PROCESSING') {
+    return t('documents.errors.cannotDelete')
+  }
+  if (message === 'CANNOT_REPROCESS') {
+    return t('documents.errors.cannotReprocess')
+  }
+  if (message === 'FILE_NOT_FOUND') {
+    return t('documents.errors.fileNotFound')
+  }
+  
+  // If message starts with error code prefix, use generic error
+  if (message.startsWith('UPLOAD_FAILED:')) {
+    return t('documents.errors.uploadFailed')
+  }
+  if (message.startsWith('DELETE_FAILED:')) {
+    return t('documents.errors.deleteFailed')
+  }
+  if (message.startsWith('REPROCESS_FAILED:')) {
+    return t('documents.errors.reprocessFailed')
+  }
+  
+  // Return original message if not a known error code
+  return message
+}
+
+function getUserFriendlyErrorMessage(errorMessage: string | null): string {
+  if (!errorMessage) {
+    return '-'
+  }
+  
+  const lowerMessage = errorMessage.toLowerCase()
+  
+  // CID font encoding issues
+  if (
+    lowerMessage.includes('cid') ||
+    lowerMessage.includes('pdftextnotfound') ||
+    lowerMessage.includes('font encoding') ||
+    lowerMessage.includes('unreadable') ||
+    lowerMessage.includes('custom font') ||
+    (lowerMessage.includes('text extraction') && lowerMessage.includes('failed'))
+  ) {
+    return t('documents.errors.pdfTextExtractionFailed')
+  }
+  
+  // AI service not configured
+  if (
+    lowerMessage.includes('api key') ||
+    lowerMessage.includes('dashscope') ||
+    lowerMessage.includes('embedding') ||
+    lowerMessage.includes('api_key') ||
+    lowerMessage.includes('credential')
+  ) {
+    return t('documents.errors.aiServiceNotConfigured')
+  }
+  
+  // PDF parsing failed
+  if (
+    lowerMessage.includes('pdf') &&
+    (lowerMessage.includes('parse') ||
+     lowerMessage.includes('parsing') ||
+     lowerMessage.includes('extract') ||
+     lowerMessage.includes('encrypted') ||
+     lowerMessage.includes('scanned'))
+  ) {
+    return t('documents.errors.pdfParsingFailed')
+  }
+  
+  // Truncate long error messages
+  if (errorMessage.length > 120) {
+    return errorMessage.substring(0, 117) + '...'
+  }
+  
+  return errorMessage
+}
+
 async function handleUpload() {
   if (fileList.value.length === 0) {
-    ElMessage.warning('请选择文件')
+    ElMessage.warning(t('documents.upload.selectFile'))
     return
   }
 
@@ -159,15 +261,15 @@ async function handleUpload() {
     const response = await documentsApi.uploadDocument(file)
 
     if (response.duplicate) {
-      ElMessage.info(`该文件已存在：${response.original_name}`)
+      ElMessage.info(t('documents.upload.duplicateFile', { filename: response.original_name }))
     } else {
-      ElMessage.success('上传成功，正在处理中...')
+      ElMessage.success(t('documents.upload.uploadSuccess'))
     }
 
     fileList.value = []
     await loadDocuments()
   } catch (error) {
-    const message = error instanceof Error ? error.message : '上传失败'
+    const message = error instanceof Error ? translateErrorMessage(error) : t('documents.errors.uploadFailed')
     ElMessage.error(message)
     console.error('Upload failed:', error)
   } finally {
@@ -239,7 +341,10 @@ function getFileTypeDisplay(mimeType: string): string {
 function getStatusDisplay(status: string): { text: string; type: 'info' | 'warning' | 'success' | 'danger' } {
   // Safe fallback for unknown status
   if (status in statusMap) {
-    return statusMap[status as DocumentStatus]
+    return {
+      text: t(`documents.status.${status}`),
+      type: statusMap[status as DocumentStatus].type
+    }
   }
   return { text: status, type: 'info' }
 }
@@ -247,18 +352,18 @@ function getStatusDisplay(status: string): { text: string; type: 'info' | 'warni
 async function handleDelete(doc: Document) {
   try {
     await ElMessageBox.confirm(
-      `确定要删除文档「${doc.original_name}」吗？此操作不可恢复。`,
-      '删除确认',
+      t('documents.list.deleteConfirm', { filename: doc.original_name }),
+      t('documents.list.deleteTitle'),
       {
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.delete'),
+        cancelButtonText: t('common.cancel'),
         type: 'warning',
         confirmButtonClass: 'el-button--danger',
       }
     )
 
     await documentsApi.deleteDocument(doc.id)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('documents.list.deleteSuccess'))
 
     // Stop polling for this document
     stopPolling(doc.id)
@@ -269,7 +374,7 @@ async function handleDelete(doc: Document) {
     if (error === 'cancel') {
       return
     }
-    const message = error instanceof Error ? error.message : '删除失败'
+    const message = error instanceof Error ? translateErrorMessage(error) : t('documents.errors.deleteFailed')
     ElMessage.error(message)
     console.error('Delete failed:', error)
   }
@@ -278,7 +383,7 @@ async function handleDelete(doc: Document) {
 async function handleReprocess(doc: Document) {
   try {
     await documentsApi.reprocessDocument(doc.id)
-    ElMessage.success('已提交重新处理，请稍候...')
+    ElMessage.success(t('documents.list.reprocessSuccess'))
 
     // Update status to processing and start polling
     const index = documents.value.findIndex((d) => d.id === doc.id)
@@ -288,10 +393,24 @@ async function handleReprocess(doc: Document) {
       startPolling(doc.id)
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : '重新处理失败'
+    const message = error instanceof Error ? translateErrorMessage(error) : t('documents.errors.reprocessFailed')
     ElMessage.error(message)
     console.error('Reprocess failed:', error)
   }
+}
+
+function goToAsk(doc: Document) {
+  router.push({
+    path: '/knowledge-ask',
+    query: { documentId: doc.id }
+  })
+}
+
+function goToCanvas(doc: Document) {
+  router.push({
+    path: '/canvas',
+    query: { documentId: doc.id }
+  })
 }
 </script>
 
@@ -324,14 +443,14 @@ async function handleReprocess(doc: Document) {
                   />
                 </svg>
               </el-icon>
-              返回
+              {{ t('common.back') }}
             </el-button>
             <div>
               <h2 class="documents__title">
-                知识库管理
+                {{ t('documents.title') }}
               </h2>
               <p class="documents__subtitle">
-                上传和管理文档，支持 TXT、Markdown (.md / .markdown)、PDF 格式
+                {{ t('documents.subtitle') }}
               </p>
             </div>
           </div>
@@ -340,7 +459,7 @@ async function handleReprocess(doc: Document) {
             :disabled="uploading"
             @click="loadDocuments"
           >
-            刷新列表
+            {{ t('common.refresh') }}
           </el-button>
         </div>
       </template>
@@ -352,7 +471,7 @@ async function handleReprocess(doc: Document) {
           shadow="hover"
         >
           <h3 class="documents__section-title">
-            上传文档
+            {{ t('documents.upload.title') }}
           </h3>
 
           <el-upload
@@ -376,15 +495,23 @@ async function handleReprocess(doc: Document) {
               </svg>
             </el-icon>
             <div class="el-upload__text">
-              拖拽文件到此处或 <em>点击选择</em>
+              {{ t('documents.upload.dragText') }} <em>{{ t('documents.upload.clickText') }}</em>
             </div>
             <template #tip>
               <div class="el-upload__tip">
-                <p>支持格式：TXT、Markdown (.md / .markdown)、PDF</p>
-                <p>大小限制：TXT/Markdown 最大 10MB，PDF 最大 50MB</p>
+                <p>{{ t('documents.upload.supportedFormats') }}</p>
+                <p>{{ t('documents.upload.sizeLimit') }}</p>
               </div>
             </template>
           </el-upload>
+
+          <el-alert
+            :title="t('documents.upload.formatNotice')"
+            type="info"
+            :closable="false"
+            show-icon
+            style="margin-bottom: 20px;"
+          />
 
           <div class="documents__upload-actions">
             <el-button
@@ -394,7 +521,7 @@ async function handleReprocess(doc: Document) {
               :disabled="fileList.length === 0"
               @click="handleUpload"
             >
-              {{ uploading ? '上传中...' : '开始上传' }}
+              {{ uploading ? t('documents.upload.uploading') : t('documents.upload.startUpload') }}
             </el-button>
           </div>
         </el-card>
@@ -405,7 +532,7 @@ async function handleReprocess(doc: Document) {
           shadow="hover"
         >
           <h3 class="documents__section-title">
-            文档列表
+            {{ t('documents.list.title') }}
           </h3>
 
           <el-table
@@ -416,7 +543,7 @@ async function handleReprocess(doc: Document) {
           >
             <el-table-column
               prop="original_name"
-              label="文件名"
+              :label="t('documents.list.filename')"
               min-width="200"
             >
               <template #default="{ row }">
@@ -428,7 +555,7 @@ async function handleReprocess(doc: Document) {
 
             <el-table-column
               prop="mime_type"
-              label="类型"
+              :label="t('documents.list.type')"
               width="120"
             >
               <template #default="{ row }">
@@ -438,7 +565,7 @@ async function handleReprocess(doc: Document) {
 
             <el-table-column
               prop="size_bytes"
-              label="大小"
+              :label="t('documents.list.size')"
               width="120"
             >
               <template #default="{ row }">
@@ -448,7 +575,7 @@ async function handleReprocess(doc: Document) {
 
             <el-table-column
               prop="status"
-              label="状态"
+              :label="t('documents.list.status')"
               width="120"
             >
               <template #default="{ row }">
@@ -460,7 +587,7 @@ async function handleReprocess(doc: Document) {
 
             <el-table-column
               prop="created_at"
-              label="创建时间"
+              :label="t('documents.list.createdAt')"
               width="180"
             >
               <template #default="{ row }">
@@ -470,16 +597,28 @@ async function handleReprocess(doc: Document) {
 
             <el-table-column
               prop="error_message"
-              label="备注"
+              :label="t('documents.list.notes')"
               min-width="200"
             >
               <template #default="{ row }">
-                <el-text
+                <el-tooltip
                   v-if="row.error_message"
-                  type="danger"
-                  truncated
+                  :content="getUserFriendlyErrorMessage(row.error_message)"
+                  placement="top"
+                  popper-class="documents-error-tooltip"
                 >
-                  {{ row.error_message }}
+                  <el-text
+                    type="danger"
+                    truncated
+                  >
+                    {{ getUserFriendlyErrorMessage(row.error_message) }}
+                  </el-text>
+                </el-tooltip>
+                <el-text
+                  v-else-if="row.status === 'succeeded'"
+                  type="success"
+                >
+                  {{ t('documents.list.availableForUse') }}
                 </el-text>
                 <el-text
                   v-else
@@ -491,36 +630,58 @@ async function handleReprocess(doc: Document) {
             </el-table-column>
 
             <el-table-column
-              label="操作"
-              width="180"
+              :label="t('documents.list.actions')"
+              width="240"
               fixed="right"
             >
               <template #default="{ row }">
                 <div class="documents__actions">
+                  <!-- Succeeded: show Ask and Canvas buttons -->
+                  <template v-if="row.status === 'succeeded'">
+                    <el-button
+                      type="primary"
+                      size="small"
+                      @click="goToAsk(row)"
+                    >
+                      {{ t('documents.list.goAsk') }}
+                    </el-button>
+                    <el-button
+                      type="success"
+                      size="small"
+                      @click="goToCanvas(row)"
+                    >
+                      {{ t('documents.list.goCanvas') }}
+                    </el-button>
+                  </template>
+                  
+                  <!-- Failed: show Reprocess button -->
                   <el-button
                     v-if="row.status === 'failed'"
                     type="primary"
                     size="small"
-                    :disabled="row.status === 'processing'"
                     @click="handleReprocess(row)"
                   >
-                    重新处理
+                    {{ t('documents.list.reprocess') }}
                   </el-button>
+                  
+                  <!-- Processing: show status text -->
+                  <el-text
+                    v-if="row.status === 'processing'"
+                    type="info"
+                    size="small"
+                  >
+                    {{ t('common.processing') }}
+                  </el-text>
+                  
+                  <!-- Delete button (not for processing) -->
                   <el-button
                     v-if="row.status !== 'processing'"
                     type="danger"
                     size="small"
                     @click="handleDelete(row)"
                   >
-                    删除
+                    {{ t('common.delete') }}
                   </el-button>
-                  <el-text
-                    v-if="row.status === 'processing'"
-                    type="info"
-                    size="small"
-                  >
-                    处理中...
-                  </el-text>
                 </div>
               </template>
             </el-table-column>
@@ -529,7 +690,7 @@ async function handleReprocess(doc: Document) {
           <el-empty
             v-if="!loading && documents.length === 0"
             :image-size="120"
-            description="还没有上传文档"
+            :description="t('documents.list.empty')"
           />
         </el-card>
       </div>
@@ -631,5 +792,11 @@ async function handleReprocess(doc: Document) {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+:global(.documents-error-tooltip) {
+  max-width: 360px;
+  line-height: 1.5;
+  white-space: normal;
 }
 </style>

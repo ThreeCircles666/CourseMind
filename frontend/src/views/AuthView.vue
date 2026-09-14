@@ -2,11 +2,13 @@
 import { computed, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const { t } = useI18n()
 
 const mode = computed(() => (route.name === 'register' ? 'register' : 'login'))
 const isLogin = computed(() => mode.value === 'login')
@@ -19,24 +21,24 @@ const errorMessage = ref('')
 async function handleSubmit() {
   errorMessage.value = ''
   if (!username.value.trim() || !password.value) {
-    errorMessage.value = '请填写所有必填字段'
+    errorMessage.value = t('auth.fillAllFields')
     return
   }
   if (!isLogin.value && !nickname.value.trim()) {
-    errorMessage.value = '请填写昵称'
+    errorMessage.value = t('auth.fillNickname')
     return
   }
   if (password.value.length < 8) {
-    errorMessage.value = '密码至少需要 8 个字符'
+    errorMessage.value = t('auth.passwordTooShort')
     return
   }
   try {
     if (isLogin.value) {
       await auth.signIn(username.value, password.value)
-      ElMessage.success('登录成功')
+      ElMessage.success(t('auth.loginSuccess'))
     } else {
       await auth.signUp(username.value, nickname.value, password.value)
-      ElMessage.success('注册成功')
+      ElMessage.success(t('auth.registerSuccess'))
     }
     const redirect = (route.query.redirect as string) || '/'
     if (redirect.startsWith('/') && !redirect.startsWith('//')) {
@@ -45,7 +47,7 @@ async function handleSubmit() {
       await router.replace('/')
     }
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '操作失败，请重试'
+    errorMessage.value = error instanceof Error ? error.message : t('auth.operationFailed')
   }
 }
 
@@ -63,7 +65,7 @@ function switchMode() {
     >
       <template #header>
         <h2 class="auth__title">
-          {{ isLogin ? '登录' : '注册' }}
+          {{ isLogin ? t('auth.login') : t('auth.register') }}
         </h2>
       </template>
 
@@ -72,12 +74,12 @@ function switchMode() {
         @submit.prevent="handleSubmit"
       >
         <el-form-item
-          label="用户名"
+          :label="t('auth.username')"
           required
         >
           <el-input
             v-model="username"
-            placeholder="3-32个字符，字母、数字或下划线"
+            :placeholder="t('auth.usernamePlaceholder')"
             :disabled="auth.isSubmitting"
             autocomplete="username"
           />
@@ -85,25 +87,25 @@ function switchMode() {
 
         <el-form-item
           v-if="!isLogin"
-          label="昵称"
+          :label="t('auth.nickname')"
           required
         >
           <el-input
             v-model="nickname"
-            placeholder="显示名称"
+            :placeholder="t('auth.nicknamePlaceholder')"
             :disabled="auth.isSubmitting"
             autocomplete="nickname"
           />
         </el-form-item>
 
         <el-form-item
-          label="密码"
+          :label="t('auth.password')"
           required
         >
           <el-input
             v-model="password"
             type="password"
-            placeholder="至少8个字符"
+            :placeholder="t('auth.passwordPlaceholder')"
             :disabled="auth.isSubmitting"
             :autocomplete="isLogin ? 'current-password' : 'new-password'"
             show-password
@@ -126,7 +128,7 @@ function switchMode() {
           :loading="auth.isSubmitting"
           class="auth__submit"
         >
-          {{ isLogin ? '登录' : '注册' }}
+          {{ isLogin ? t('auth.loginButton') : t('auth.registerButton') }}
         </el-button>
 
         <div class="auth__switch">
@@ -134,7 +136,7 @@ function switchMode() {
             link
             @click="switchMode"
           >
-            {{ isLogin ? '没有账户，去注册' : '已有账户，去登录' }}
+            {{ isLogin ? t('auth.switchToRegister') : t('auth.switchToLogin') }}
           </el-button>
         </div>
       </el-form>

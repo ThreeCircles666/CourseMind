@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { SUPPORTED_LOCALES, LOCALE_NAMES, setLocale, type SupportedLocale } from '@/i18n'
 
 const auth = useAuthStore()
 const router = useRouter()
+const { t, locale } = useI18n()
 
 function goToChat() {
   router.push('/chat')
@@ -17,13 +20,23 @@ function goToKnowledgeAsk() {
   router.push('/knowledge-ask')
 }
 
+function goToCanvas() {
+  router.push('/canvas')
+}
+
 function goToAbout() {
   router.push('/about')
 }
 
-function handleLogout() {
-  auth.signOut()
-  router.push('/login')
+function handleCommand(command: string) {
+  if (command === 'logout') {
+    auth.signOut()
+    router.push('/login')
+  }
+}
+
+function handleLocaleChange(newLocale: SupportedLocale) {
+  setLocale(newLocale)
 }
 </script>
 
@@ -33,26 +46,40 @@ function handleLogout() {
       <el-header class="index-header">
         <div class="header-content">
           <h1 class="app-title">
-            CourseMind
+            {{ t('common.appName') }}
           </h1>
-          <el-dropdown @command="handleLogout">
-            <el-button text>
-              <el-avatar
-                :size="32"
-                class="user-avatar"
-              >
-                {{ auth.user?.nickname?.charAt(0) || 'U' }}
-              </el-avatar>
-              <span class="username">{{ auth.user?.nickname }}</span>
-            </el-button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="logout">
-                  退出登录
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
+          <div class="header-actions">
+            <el-select
+              :model-value="locale"
+              class="locale-selector"
+              @change="handleLocaleChange"
+            >
+              <el-option
+                v-for="loc in SUPPORTED_LOCALES"
+                :key="loc"
+                :label="LOCALE_NAMES[loc]"
+                :value="loc"
+              />
+            </el-select>
+            <el-dropdown @command="handleCommand">
+              <el-button text>
+                <el-avatar
+                  :size="32"
+                  class="user-avatar"
+                >
+                  {{ auth.user?.nickname?.charAt(0) || 'U' }}
+                </el-avatar>
+                <span class="username">{{ auth.user?.nickname }}</span>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="logout">
+                    {{ t('common.logout') }}
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
         </div>
       </el-header>
 
@@ -79,10 +106,10 @@ function handleLogout() {
               </svg>
             </el-icon>
             <h2 class="welcome-title">
-              欢迎回来，{{ auth.user?.nickname }}！
+              {{ t('common.welcome', { nickname: auth.user?.nickname }) }}
             </h2>
             <p class="welcome-subtitle">
-              选择下方功能开始使用 CourseMind
+              {{ t('home.subtitle') }}
             </p>
           </div>
 
@@ -109,16 +136,52 @@ function handleLogout() {
                   </svg>
                 </el-icon>
                 <h3 class="feature-title">
-                  知识库问答
+                  {{ t('home.knowledgeAsk.title') }}
                 </h3>
                 <p class="feature-desc">
-                  选择已上传资料进行问答，并查看答案的引用来源
+                  {{ t('home.knowledgeAsk.desc') }}
                 </p>
                 <el-button
                   color="#8B5CF6"
                   class="feature-button"
                 >
-                  开始提问
+                  {{ t('home.knowledgeAsk.button') }}
+                </el-button>
+              </div>
+            </el-card>
+
+            <el-card
+              shadow="hover"
+              class="feature-card"
+              @click="goToCanvas"
+            >
+              <div class="feature-content">
+                <el-icon
+                  :size="48"
+                  color="#F59E0B"
+                  class="feature-icon"
+                >
+                  <svg
+                    viewBox="0 0 1024 1024"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      fill="currentColor"
+                      d="M160 256h256a32 32 0 0 1 32 32v256a32 32 0 0 1-32 32H160a32 32 0 0 1-32-32V288a32 32 0 0 1 32-32zm0 384h256a32 32 0 0 1 32 32v256a32 32 0 0 1-32 32H160a32 32 0 0 1-32-32V672a32 32 0 0 1 32-32zm384-384h320a32 32 0 0 1 32 32v256a32 32 0 0 1-32 32H544a32 32 0 0 1-32-32V288a32 32 0 0 1 32-32zm0 384h320a32 32 0 0 1 32 32v256a32 32 0 0 1-32 32H544a32 32 0 0 1-32-32V672a32 32 0 0 1 32-32z"
+                    />
+                  </svg>
+                </el-icon>
+                <h3 class="feature-title">
+                  {{ t('home.learningCanvas.title') }}
+                </h3>
+                <p class="feature-desc">
+                  {{ t('home.learningCanvas.desc') }}
+                </p>
+                <el-button
+                  type="warning"
+                  class="feature-button"
+                >
+                  {{ t('home.learningCanvas.button') }}
                 </el-button>
               </div>
             </el-card>
@@ -149,16 +212,16 @@ function handleLogout() {
                   </svg>
                 </el-icon>
                 <h3 class="feature-title">
-                  AI 对话
+                  {{ t('home.chat.title') }}
                 </h3>
                 <p class="feature-desc">
-                  与智能助手进行自然对话，获取学习辅导和问题解答
+                  {{ t('home.chat.desc') }}
                 </p>
                 <el-button
                   type="primary"
                   class="feature-button"
                 >
-                  开始对话
+                  {{ t('home.chat.button') }}
                 </el-button>
               </div>
             </el-card>
@@ -185,16 +248,16 @@ function handleLogout() {
                   </svg>
                 </el-icon>
                 <h3 class="feature-title">
-                  知识库
+                  {{ t('home.documents.title') }}
                 </h3>
                 <p class="feature-desc">
-                  上传和管理文档，支持 TXT、Markdown、PDF 格式
+                  {{ t('home.documents.desc') }}
                 </p>
                 <el-button
                   type="warning"
                   class="feature-button"
                 >
-                  管理文档
+                  {{ t('home.documents.button') }}
                 </el-button>
               </div>
             </el-card>
@@ -225,16 +288,16 @@ function handleLogout() {
                   </svg>
                 </el-icon>
                 <h3 class="feature-title">
-                  关于项目
+                  {{ t('home.about.title') }}
                 </h3>
                 <p class="feature-desc">
-                  了解 CourseMind 的功能介绍和使用说明
+                  {{ t('home.about.desc') }}
                 </p>
                 <el-button
                   type="success"
                   class="feature-button"
                 >
-                  查看详情
+                  {{ t('home.about.button') }}
                 </el-button>
               </div>
             </el-card>
@@ -269,6 +332,30 @@ function handleLogout() {
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.locale-selector {
+  width: 140px;
+}
+
+.locale-selector :deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.locale-selector :deep(.el-input__inner) {
+  color: white;
+}
+
+.locale-selector :deep(.el-icon) {
+  color: white;
 }
 
 .app-title {

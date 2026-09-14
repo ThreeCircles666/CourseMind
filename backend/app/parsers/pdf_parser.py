@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import unicodedata
 
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError
@@ -148,6 +149,10 @@ class PdfParser(DocumentParser):
 
         # Merge all pages with double newline separator
         full_text = '\n\n'.join(total_text_parts)
+        
+        # Check for CID font encoding issues
+        _check_cid_encoding(full_text, filename)
+        _check_pdf_text_quality(full_text, filename)
 
         metadata = {
             'filename': filename,
@@ -163,4 +168,69 @@ class PdfParser(DocumentParser):
             text=full_text,
             pages=tuple(pages),
             metadata=metadata,
+        )
+
+
+def _check_cid_encoding(text: str, filename: str) -> None:
+    """Check if extracted text contains excessive CID references.
+    
+    CID (Character ID) references like "(cid:123)" indicate font encoding issues
+    where the PDF uses custom fonts that prevent text extraction.
+    
+    Args:
+        text: Extracted text to check
+        filename: Filename for error message
+        
+    Raises:
+        PdfTextNotFoundError: If text quality is too poor due to CID encoding
+    """
+    # Count CID occurrences
+    cid_count = text.count("(cid:")
+
+    if len(text) < 200 and cid_count < 5:
+        # Text too short to reliably detect unless CID noise dominates.
+        return
+    
+    # Rule 1: Absolute count threshold
+    if cid_count >= 20:
+        raise PdfTextNotFoundError(
+            f"PDF text extraction failed: the file may use custom font encoding or scanned pages. "
+            f"Found {cid_count} font encoding errors. Please use a text-selectable PDF."
+        )
+    
+    # Rule 2: Ratio threshold for shorter documents
+    if cid_count > 0:
+        # Calculate ratio of CID characters to total text
+        # Each "(cid:123)" is roughly 10 chars, estimate total CID content
+        cid_chars = cid_count * 10
+        ratio = cid_chars / len(text)
+        
+        # If CID content is >15% of document, consider it unusable
+        if ratio > 0.15:
+            raise PdfTextNotFoundError(
+                f"PDF text extraction failed: the file may use custom font encoding or scanned pages. "
+                f"Text quality too poor for indexing. Please use a text-selectable PDF."
+            )
+
+
+def _check_pdf_text_quality(text: str, filename: str) -> None:
+    """Reject text that was technically extracted but is mostly font-encoding noise."""
+    visible_chars = [char for char in text if not char.isspace()]
+    if len(visible_chars) < 500:
+        return
+
+    suspicious_count = 0
+    for char in visible_chars:
+        category = unicodedata.category(char)
+        is_private_or_unknown = category in {"Co", "Cn"}
+        is_cjk_extension = "\u3400" <= char <= "\u4dbf" or "\U00020000" <= char <= "\U0002EBEF"
+        is_symbol_noise = category == "So"
+        if is_private_or_unknown or is_cjk_extension or is_symbol_noise:
+            suspicious_count += 1
+
+    suspicious_ratio = suspicious_count / len(visible_chars)
+    if suspicious_ratio > 0.2:
+        raise PdfTextNotFoundError(
+            "PDF text extraction failed: the extracted text appears unreadable due to "
+            "custom font encoding or scanned pages. Please use a text-selectable PDF."
         )

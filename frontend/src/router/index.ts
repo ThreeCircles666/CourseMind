@@ -4,6 +4,7 @@ import AboutView from '@/views/AboutView.vue'
 import ChatView from '@/views/ChatView.vue'
 import DocumentsView from '@/views/DocumentsView.vue'
 import KnowledgeAskView from '@/views/KnowledgeAskView.vue'
+import LearningCanvasView from '@/views/LearningCanvasView.vue'
 import AuthView from '@/views/AuthView.vue'
 import { useAuthStore } from '@/stores/auth'
 
@@ -15,6 +16,7 @@ const router = createRouter({
     { path: '/chat', name: 'chat', component: ChatView, meta: { requiresAuth: true } },
     { path: '/documents', name: 'documents', component: DocumentsView, meta: { requiresAuth: true } },
     { path: '/knowledge-ask', name: 'knowledge-ask', component: KnowledgeAskView, meta: { requiresAuth: true } },
+    { path: '/canvas', name: 'canvas', component: LearningCanvasView },
     { path: '/login', name: 'login', component: AuthView, meta: { guestOnly: true } },
     { path: '/register', name: 'register', component: AuthView, meta: { guestOnly: true } },
   ],

@@ -192,7 +192,6 @@ async def upload_document(
     db: Session = Depends(get_db),
     upload_root: Path = Depends(get_upload_root),
     session_factory: SessionFactory = Depends(get_background_session_factory),
-    embedding_provider: EmbeddingProvider = Depends(get_embedding_provider),
     background_processor: Callable[..., object] = Depends(get_background_processor),
 ) -> DocumentResponse:
     """Store an upload, deduplicate it, commit metadata, then enqueue ingestion."""
@@ -259,7 +258,7 @@ async def upload_document(
             current_user.id,
             safe_name,
             session_factory,
-            embedding_provider,
+            None,
             upload_root,
         )
         return DocumentResponse.model_validate(document)

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import * as documentsApi from '@/api/documents'
 import type { Document } from '@/api/documents'
@@ -8,6 +9,8 @@ import { askKnowledgeBase } from '@/api/rag'
 import type { RagAnswer } from '@/api/rag'
 
 const router = useRouter()
+const route = useRoute()
+const { t } = useI18n()
 const documents = ref<Document[]>([])
 const selectedDocumentIds = ref<string[]>([])
 const question = ref('')
@@ -29,8 +32,14 @@ async function loadDocuments() {
     documents.value = await documentsApi.getDocuments()
     const availableIds = new Set(succeededDocuments.value.map((document) => document.id))
     selectedDocumentIds.value = selectedDocumentIds.value.filter((id) => availableIds.has(id))
+    
+    // Auto-select document from query parameter
+    const documentId = route.query.documentId as string | undefined
+    if (documentId && availableIds.has(documentId) && !selectedDocumentIds.value.includes(documentId)) {
+      selectedDocumentIds.value = [documentId]
+    }
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '加载文档失败')
+    ElMessage.error(error instanceof Error ? error.message : t('knowledgeAsk.errors.loadDocumentsFailed'))
   } finally {
     loadingDocuments.value = false
   }
@@ -43,7 +52,7 @@ async function submitQuestion() {
   try {
     result.value = await askKnowledgeBase(question.value.trim(), selectedDocumentIds.value)
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '知识库问答失败')
+    ElMessage.error(error instanceof Error ? error.message : t('knowledgeAsk.errors.askFailed'))
   } finally {
     asking.value = false
   }
@@ -63,11 +72,11 @@ onMounted(loadDocuments)
         text
         @click="router.push('/')"
       >
-        ← 返回
+        ← {{ t('common.back') }}
       </el-button>
       <div>
-        <h1>知识库问答</h1>
-        <p>选择资料后提问，回答将显示引用来源</p>
+        <h1>{{ t('knowledgeAsk.title') }}</h1>
+        <p>{{ t('knowledgeAsk.headerSubtitle') }}</p>
       </div>
     </header>
 
@@ -75,25 +84,25 @@ onMounted(loadDocuments)
       <el-card shadow="never">
         <template #header>
           <div class="card-header">
-            <strong>1. 选择知识库文档</strong>
+            <strong>{{ t('knowledgeAsk.documentStep') }}</strong>
             <el-button
               :loading="loadingDocuments"
               @click="loadDocuments"
             >
-              刷新
+              {{ t('common.refresh') }}
             </el-button>
           </div>
         </template>
 
         <el-empty
           v-if="!loadingDocuments && succeededDocuments.length === 0"
-          description="暂无处理成功的文档，请先上传资料"
+          :description="t('knowledgeAsk.noSucceededDocuments')"
         >
           <el-button
             type="primary"
             @click="router.push('/documents')"
           >
-            前往上传
+            {{ t('knowledgeAsk.goUpload') }}
           </el-button>
         </el-empty>
 
@@ -115,7 +124,7 @@ onMounted(loadDocuments)
 
       <el-card shadow="never">
         <template #header>
-          <strong>2. 输入问题</strong>
+          <strong>{{ t('knowledgeAsk.questionStep') }}</strong>
         </template>
         <el-input
           v-model="question"
@@ -123,19 +132,19 @@ onMounted(loadDocuments)
           :rows="4"
           maxlength="2000"
           show-word-limit
-          placeholder="例如：CourseMind内部测试代号是什么？"
+          :placeholder="t('knowledgeAsk.questionPlaceholder')"
           @keydown.meta.enter.prevent="submitQuestion"
           @keydown.ctrl.enter.prevent="submitQuestion"
         />
         <div class="ask-actions">
-          <span>Command/Ctrl + Enter 发送</span>
+          <span>{{ t('knowledgeAsk.sendShortcut') }}</span>
           <el-button
             type="primary"
             :disabled="!canAsk"
             :loading="asking"
             @click="submitQuestion"
           >
-            提问
+            {{ asking ? t('knowledgeAsk.asking') : t('knowledgeAsk.askButton') }}
           </el-button>
         </div>
       </el-card>
@@ -146,9 +155,9 @@ onMounted(loadDocuments)
       >
         <template #header>
           <div class="card-header">
-            <strong>回答</strong>
+            <strong>{{ t('knowledgeAsk.answer') }}</strong>
             <el-tag :type="result.insufficient_context ? 'warning' : 'success'">
-              {{ result.insufficient_context ? '资料不足' : '已引用知识库' }}
+              {{ result.insufficient_context ? t('knowledgeAsk.insufficientContextTag') : t('knowledgeAsk.citedKnowledgeBase') }}
             </el-tag>
           </div>
         </template>
@@ -161,7 +170,7 @@ onMounted(loadDocuments)
           v-if="result.sources.length > 0"
           class="sources"
         >
-          <h3>引用来源</h3>
+          <h3>{{ t('knowledgeAsk.sources') }}</h3>
           <article
             v-for="source in result.sources"
             :key="source.chunk_id"
@@ -172,8 +181,8 @@ onMounted(loadDocuments)
                 {{ source.source_id }}
               </el-tag>
               <strong>{{ source.file_name }}</strong>
-              <span v-if="source.page_number">第 {{ source.page_number }} 页</span>
-              <span>相似度 {{ formatSimilarity(source.similarity) }}</span>
+              <span v-if="source.page_number">{{ t('knowledgeAsk.page', { page: source.page_number }) }}</span>
+              <span>{{ t('knowledgeAsk.similarity', { score: formatSimilarity(source.similarity) }) }}</span>
             </div>
             <p>{{ source.excerpt }}</p>
           </article>
