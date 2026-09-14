@@ -15,11 +15,14 @@ CourseMind 是 Vue 3 + FastAPI + PostgreSQL/pgvector 的知识库问答应用，
 - pgvector 余弦相似度检索；
 - 带来源引用和资料不足判断的 RAG 问答；
 - 文档所有权隔离、删除和失败后重新处理；
-- 文档管理与知识库问答前端页面。
+- 文档管理与知识库问答前端页面；
+- 学习画布：从已处理课件生成知识卡片、显示来源、局部追问、子卡片回写、自测题和易忘点标记；
+- 演示画布与生成失败 fallback，保证无 API Key 或模型异常时仍可演示核心交互；
+- 简体中文与 English 双语界面，支持全局语言切换和本地保存语言偏好。
 
 ## 2. 技术栈与目录
 
-- 前端：Vue 3、TypeScript、Vite、Element Plus、Pinia、Vue Router。
+- 前端：Vue 3、TypeScript、Vite、Element Plus、Pinia、Vue Router、vue-i18n。
 - 后端：Python、FastAPI、SQLAlchemy 2、Pydantic、Alembic、httpx。
 - 数据库：PostgreSQL 17、pgvector。
 - AI：DashScope `text-embedding-v3`（1024 维）和 Qwen Chat。
@@ -42,6 +45,7 @@ CourseMind/
 │   └── tests/
 ├── frontend/src/
 │   ├── api/
+│   ├── i18n/             # zh-CN、en-US 语言包与语言切换
 │   ├── router/
 │   ├── stores/
 │   └── views/
@@ -74,6 +78,8 @@ cp frontend/.env.example frontend/.env
 - `RAG_MIN_SIMILARITY`：服务端不可降低的最低相似度，默认 `0.3`。
 
 真实密钥只放在 `backend/.env` 或进程环境中，不提交到 Git。
+
+前端语言包位于 `frontend/src/i18n/locales/`。当前支持 `zh-CN` 与 `en-US`，语言切换器在 `frontend/src/App.vue` 中作为全局控件渲染；用户选择会写入 `localStorage.locale`。
 
 ### 3.3 启动 PostgreSQL
 
@@ -209,7 +215,40 @@ max(RAG_MIN_SIMILARITY, request.min_similarity or 0.0)
 
 该协议依赖模型遵循提示，不等于语义正确性证明。引用编号存在也不等于原文支持结论，仍需人工核对和多样化评测；JSON 格式不合规当前不自动修复或重试。
 
-### 6.2 当前验证与后续交接
+### 6.2 学习画布如何复用 RAG
+
+学习画布前端位于 `frontend/src/views/LearningCanvasView.vue`，不新增专用后端接口，而是复用 `/api/v1/rag/ask`：
+
+```text
+选择已处理文档
+  -> 发送“提炼复习知识点”的 RAG 问题
+  -> 后端检索文档 chunk 并调用 Qwen
+  -> 模型按 RAG 协议返回带引用的答案
+  -> 前端解析为 CanvasCard
+  -> 卡片显示标题、摘要、标签、来源文件、页码和原文片段
+```
+
+画布生成提示必须兼容 RAG 后端的引用协议：每条知识点都应带 `[S1]`、`[S2]` 等来源编号。前端会解析编号列表和结构化 JSON；若解析不到可用卡片，或者接口失败，会加载带 `isGenerationFallback` 标记的示例卡片，并在 UI 中显示“生成失败，使用示例结构/演示数据”。
+
+后端 `RagService` 对模型输出保持严格校验：完整或部分回答仍必须引用合法来源；但会容忍模型把 JSON 对象包在 Markdown 代码块或前后说明文字中，再提取其中的 JSON 对象进行校验。这一行为由 `tests/test_rag_answer_status.py::test_fenced_json_answer_is_accepted` 覆盖。
+
+画布当前实现的交互能力：
+
+- 加载演示画布；
+- 基于上传课件生成学习画布；
+- 清空画布；
+- 重置演示学习记录；
+- 点击卡片查看详情、来源和原文片段；
+- 针对整张卡片追问；
+- 选中文本后只围绕选中文本追问；
+- 快捷操作：解释得更简单、举一个例子、生成自测题；
+- 追问结果作为子卡片回写画布；
+- 基于追问次数自动标记易忘点；
+- 展示高频考点、自测题、追问解释等标签。
+
+学习画布属于前端状态驱动体验，目前不会把画布卡片或学习记录持久化到数据库；演示卡片的追问次数和易忘点信号使用浏览器本地存储。
+
+### 6.3 当前验证与后续交接
 
 - 2026-09-06：`backend/tests` 完整回归 322 passed；RAG 专项连续两轮各 63 passed。
 - 用户浏览器人工复测：Software Profiling 正常回答并引用 PDF 第 27 页；资料未提供的考试日期/考场拒答且无来源；混合提问保留可回答内容及引用，同时标记资料不足。
@@ -218,8 +257,9 @@ max(RAG_MIN_SIMILARITY, request.min_similarity or 0.0)
 - PDF 第 5 页对应书内第 2、3 页，跨页排版需要区分物理页码和印刷页码。
 - 仅在项目外做了 macOS 本地 OCR 单页试验：高清渲染改善明显，关键人口/面积数字可识别，但仍有漏字。OCR 未接入应用，不具备生产 OCR 能力，不应假定 macOS 试验可以直接部署到 Linux。
 - 下次优先抽查表格及图文混排页，核对文字、数字、单位及阅读顺序，再决定异常文本检测和 OCR 方案；不要直接索引乱码，也不要由模型猜测纠正原文。
-- 前端复选框存在 Element Plus label-as-value 弃用警告，待维护；未在本轮修改前端。
-- 后续产品方向：可点击原文溯源、知识点卡片、选中知识点出题自测。均为待规划功能；PPTX/DOCX、识图、完整画布和学习者画像尚未因本轮试验而实现。
+- 前端复选框存在 Element Plus label-as-value 弃用警告，待维护。
+- 已实现知识点卡片、选中内容追问和自测题生成；PPTX/DOCX、识图、OCR 接入、真正无限画布和完整学习者画像仍未实现。
+- 2026-09-14：修复学习画布真实生成失败问题。根因是前端要求 JSON 数组与后端 RAG 引用协议冲突，以及模型可能返回 fenced JSON。当前通过“编号列表 + 引用”的画布提示和后端 JSON 提取容错解决。已验证 `tests/test_rag_answer_status.py` 为 `15 passed`；完整后端测试未在本轮运行。
 
 文档内容被视为不可信数据并与系统规则隔离。任何不存在、属于其他用户或 `NULL owner` 的文档都统一返回 404；混合合法和越权 ID 时整个请求失败，Provider 不会被调用。
 
@@ -247,6 +287,8 @@ max(RAG_MIN_SIMILARITY, request.min_similarity or 0.0)
 
 除健康检查、注册和登录外，受保护接口通过 `Authorization: Bearer <access_token>` 认证。Refresh Token 使用 HttpOnly Cookie。
 
+学习画布没有独立后端 API，真实生成和追问均复用 `/rag/ask`；演示画布和生成失败 fallback 在前端完成。
+
 ## 8. 前端页面
 
 - `/login`、`/register`：认证；
@@ -254,9 +296,12 @@ max(RAG_MIN_SIMILARITY, request.min_similarity or 0.0)
 - `/chat`：普通 AI 聊天；
 - `/documents`：上传、查看状态、重新处理和删除文档；
 - `/knowledge-ask`：选择成功文档、提问并查看引用来源；
+- `/canvas`：学习画布，支持选择课件生成知识卡片、加载演示画布、追问、选中文本追问、自测题、易忘点标记和来源查看；
 - `/about`：项目说明。
 
 前端文件校验用于即时反馈，后端校验始终是最终安全边界。
+
+`App.vue` 提供全局语言选择器。语言切换应始终通过 `setLocale()`，避免页面自行写 `localStorage` 或直接改 `document.documentElement.lang`。
 
 ## 9. 测试与验收
 
@@ -290,6 +335,8 @@ cd backend
 运行真实 DashScope 脚本时可按本机网络情况清除代理环境变量。脚本不得打印 API Key、完整 Prompt 或向量。
 
 最近记录（2026-09-06）：完整后端测试 `322 passed`。该数字会随测试增加而变化，应以本地最新运行结果为准；不代表真实问答准确率或生产验收。
+
+最近记录（2026-09-14）：安装项目声明的 dev 依赖后，`tests/test_rag_answer_status.py` 运行结果为 `15 passed`，覆盖 RAG 回答状态、引用校验和 fenced JSON 解析。该记录只覆盖专项测试，不代表完整回归。
 
 ## 10. 数据库迁移
 
@@ -350,7 +397,8 @@ docker compose exec -T postgres pg_dump \
 3. 增加前端 Vitest 与端到端浏览器测试；
 4. 增加结构化日志、指标与任务恢复机制；
 5. 优化前端按路由拆包；
-6. 部署前明确对象存储、备份、密钥管理和 HTTPS 策略。
+6. 为学习画布增加持久化存储、拖拽布局和更完整的学习者画像；
+7. 部署前明确对象存储、备份、密钥管理和 HTTPS 策略。
 
 ## 14. 修改功能时的最小检查清单
 
