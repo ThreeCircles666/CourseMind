@@ -150,7 +150,8 @@ CourseMind/
 ├── docker-compose.yml
 ├── start-docker.sh
 ├── DEMO_SCRIPT.md
-└── README.md
+├── README.md             # English
+└── README.zh-CN.md       # Simplified Chinese
 ```
 
 ## Local Development
@@ -164,6 +165,7 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
+pip install -e ".[dev]"
 export DASHSCOPE_API_KEY=sk-your-key-here
 alembic upgrade head
 uvicorn app.main:app --reload --port 8000
@@ -193,7 +195,7 @@ npm run type-check
 
 # Backend tests, after installing test dependencies locally
 cd backend
-pytest
+.venv/bin/python -m pytest
 ```
 
 ## Documents
