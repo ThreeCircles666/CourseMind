@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ChatRequest(BaseModel):
@@ -11,6 +11,18 @@ class ChatRequest(BaseModel):
 
     message: str = Field(..., min_length=1, description="User message to send to the model")
     session_id: int | None = Field(default=None, description="Optional session ID to continue existing conversation")
+    response_language: str = Field(
+        default="zh-CN",
+        description="Preferred response language, usually matching the UI locale."
+    )
+
+    @field_validator("response_language")
+    @classmethod
+    def validate_response_language(cls, v: str) -> str:
+        """Normalize supported UI locales."""
+        if v not in {"zh-CN", "en-US"}:
+            return "zh-CN"
+        return v
 
 
 class ChatStreamEvent(BaseModel):

@@ -64,6 +64,15 @@ async def execute_chat(
     # Assemble messages with system prompt if user nickname is provided
     messages = []
     
+    response_language = "English" if context.response_language == "en-US" else "Simplified Chinese"
+    messages.append({
+        "role": "system",
+        "content": (
+            f"Reply in {response_language}. "
+            "Match the user's CourseMind interface language even if the user's message uses another language."
+        ),
+    })
+
     if context.user_nickname:
         messages.append({
             "role": "system",

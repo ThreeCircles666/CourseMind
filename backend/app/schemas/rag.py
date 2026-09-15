@@ -27,6 +27,10 @@ class RagAskRequest(BaseModel):
         le=1.0,
         description="Minimum cosine similarity threshold (optional). Server enforces a minimum of RAG_MIN_SIMILARITY."
     )
+    response_language: str = Field(
+        default="zh-CN",
+        description="Preferred response language, usually matching the UI locale."
+    )
 
     @field_validator("question")
     @classmethod
@@ -50,6 +54,14 @@ class RagAskRequest(BaseModel):
                 seen.add(doc_id)
                 result.append(doc_id)
         return result
+
+    @field_validator("response_language")
+    @classmethod
+    def validate_response_language(cls, v: str) -> str:
+        """Normalize supported UI locales."""
+        if v not in {"zh-CN", "en-US"}:
+            return "zh-CN"
+        return v
 
 
 class RagSource(BaseModel):

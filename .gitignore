@@ -221,6 +221,10 @@ frontend/DOCUMENTS_FEATURE.md
 frontend/*REPORT.md
 frontend/*FIX*.md
 
+# Generated hackathon deck build/preview artifacts
+submission/.deck-build/
+submission/.deck-preview/
+
 # Accidental local copy of the installed pgvector dependency
 backend/app/pgvector/
 

@@ -7,10 +7,11 @@ import * as documentsApi from '@/api/documents'
 import type { Document } from '@/api/documents'
 import { askKnowledgeBase } from '@/api/rag'
 import type { RagAnswer } from '@/api/rag'
+import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 
 const router = useRouter()
 const route = useRoute()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const documents = ref<Document[]>([])
 const selectedDocumentIds = ref<string[]>([])
 const question = ref('')
@@ -20,6 +21,10 @@ const result = ref<RagAnswer | null>(null)
 
 const succeededDocuments = computed(() =>
   documents.value.filter((document) => document.status === 'succeeded'),
+)
+
+const selectedDocuments = computed(() =>
+  succeededDocuments.value.filter((document) => selectedDocumentIds.value.includes(document.id)),
 )
 
 const canAsk = computed(
@@ -50,7 +55,7 @@ async function submitQuestion() {
   asking.value = true
   result.value = null
   try {
-    result.value = await askKnowledgeBase(question.value.trim(), selectedDocumentIds.value)
+    result.value = await askKnowledgeBase(question.value.trim(), selectedDocumentIds.value, locale.value)
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : t('knowledgeAsk.errors.askFailed'))
   } finally {
@@ -67,127 +72,197 @@ onMounted(loadDocuments)
 
 <template>
   <div class="knowledge-ask">
-    <header class="knowledge-ask__header">
-      <el-button
-        text
-        @click="router.push('/')"
-      >
-        ← {{ t('common.back') }}
-      </el-button>
-      <div>
-        <h1>{{ t('knowledgeAsk.title') }}</h1>
-        <p>{{ t('knowledgeAsk.headerSubtitle') }}</p>
+    <header class="knowledge-ask__hero">
+      <div class="cm-container knowledge-ask__hero-inner">
+        <div>
+          <el-button
+            text
+            class="knowledge-ask__back"
+            @click="router.push('/')"
+          >
+            ← {{ t('common.back') }}
+          </el-button>
+          <h1>{{ t('knowledgeAsk.title') }}</h1>
+          <p>{{ t('knowledgeAsk.headerSubtitle') }}</p>
+        </div>
+        
+        <div class="knowledge-ask__hero-actions">
+          <LocaleSwitcher />
+          <el-tag
+            size="large"
+            type="success"
+            effect="light"
+          >
+            {{ t('knowledgeAsk.citedKnowledgeBase') }}
+          </el-tag>
+        </div>
       </div>
     </header>
 
-    <main class="knowledge-ask__main">
-      <el-card shadow="never">
-        <template #header>
+    <main class="knowledge-ask__main cm-container">
+      <aside class="knowledge-panel">
+        <el-card shadow="never" class="knowledge-card">
           <div class="card-header">
-            <strong>{{ t('knowledgeAsk.documentStep') }}</strong>
+            <div>
+              <strong>{{ t('knowledgeAsk.documentStep') }}</strong>
+              <p>{{ t('knowledgeAsk.selectedCount', { count: selectedDocumentIds.length }) }}</p>
+            </div>
             <el-button
+              size="small"
               :loading="loadingDocuments"
               @click="loadDocuments"
             >
               {{ t('common.refresh') }}
             </el-button>
           </div>
-        </template>
 
-        <el-empty
-          v-if="!loadingDocuments && succeededDocuments.length === 0"
-          :description="t('knowledgeAsk.noSucceededDocuments')"
-        >
-          <el-button
-            type="primary"
-            @click="router.push('/documents')"
+          <el-empty
+            v-if="!loadingDocuments && succeededDocuments.length === 0"
+            :description="t('knowledgeAsk.noSucceededDocuments')"
           >
-            {{ t('knowledgeAsk.goUpload') }}
-          </el-button>
-        </el-empty>
+            <el-button
+              type="primary"
+              @click="router.push('/documents')"
+            >
+              {{ t('knowledgeAsk.goUpload') }}
+            </el-button>
+          </el-empty>
 
-        <el-checkbox-group
-          v-else
-          v-model="selectedDocumentIds"
-          class="document-options"
-        >
-          <el-checkbox
-            v-for="document in succeededDocuments"
-            :key="document.id"
-            :label="document.id"
-            border
+          <el-checkbox-group
+            v-else
+            v-model="selectedDocumentIds"
+            class="document-options"
           >
-            {{ document.original_name }}
-          </el-checkbox>
-        </el-checkbox-group>
-      </el-card>
+            <el-checkbox
+              v-for="document in succeededDocuments"
+              :key="document.id"
+              :label="document.id"
+              border
+            >
+              <span class="document-option">
+                <strong>{{ document.original_name }}</strong>
+                <small>{{ new Date(document.updated_at).toLocaleDateString() }}</small>
+              </span>
+            </el-checkbox>
+          </el-checkbox-group>
+        </el-card>
 
-      <el-card shadow="never">
-        <template #header>
-          <strong>{{ t('knowledgeAsk.questionStep') }}</strong>
-        </template>
-        <el-input
-          v-model="question"
-          type="textarea"
-          :rows="4"
-          maxlength="2000"
-          show-word-limit
-          :placeholder="t('knowledgeAsk.questionPlaceholder')"
-          @keydown.meta.enter.prevent="submitQuestion"
-          @keydown.ctrl.enter.prevent="submitQuestion"
-        />
-        <div class="ask-actions">
-          <span>{{ t('knowledgeAsk.sendShortcut') }}</span>
-          <el-button
-            type="primary"
-            :disabled="!canAsk"
-            :loading="asking"
-            @click="submitQuestion"
-          >
-            {{ asking ? t('knowledgeAsk.asking') : t('knowledgeAsk.askButton') }}
-          </el-button>
-        </div>
-      </el-card>
+        <el-card shadow="never" class="knowledge-card scope-card">
+          <strong>{{ t('knowledgeAsk.selectDocuments') }}</strong>
+          <div class="scope-list">
+            <el-tag
+              v-for="document in selectedDocuments"
+              :key="document.id"
+              effect="plain"
+            >
+              {{ document.original_name }}
+            </el-tag>
+            <el-text v-if="selectedDocuments.length === 0" type="info">
+              {{ t('knowledgeAsk.noSucceededDocuments') }}
+            </el-text>
+          </div>
+        </el-card>
+      </aside>
 
-      <el-card
-        v-if="result"
-        shadow="never"
-      >
-        <template #header>
+      <section class="ask-workspace">
+        <el-card shadow="never" class="question-card">
           <div class="card-header">
-            <strong>{{ t('knowledgeAsk.answer') }}</strong>
+            <div>
+              <strong>{{ t('knowledgeAsk.questionStep') }}</strong>
+              <p>{{ t('knowledgeAsk.question') }}</p>
+            </div>
+          </div>
+          <el-input
+            v-model="question"
+            type="textarea"
+            :rows="5"
+            maxlength="2000"
+            show-word-limit
+            :placeholder="t('knowledgeAsk.questionPlaceholder')"
+            @keydown.meta.enter.prevent="submitQuestion"
+            @keydown.ctrl.enter.prevent="submitQuestion"
+          />
+          <div class="ask-actions">
+            <span>{{ t('knowledgeAsk.sendShortcut') }}</span>
+            <el-button
+              type="primary"
+              size="large"
+              :disabled="!canAsk"
+              :loading="asking"
+              @click="submitQuestion"
+            >
+              {{ asking ? t('knowledgeAsk.asking') : t('knowledgeAsk.askButton') }}
+            </el-button>
+          </div>
+        </el-card>
+
+        <el-card
+          v-if="asking"
+          shadow="never"
+          class="answer-card"
+        >
+          <el-skeleton :rows="4" animated />
+        </el-card>
+
+        <el-card
+          v-else-if="result"
+          shadow="never"
+          class="answer-card"
+        >
+          <div class="card-header">
+            <div>
+              <strong>{{ t('knowledgeAsk.answer') }}</strong>
+              <p>{{ t('knowledgeAsk.sources') }} · {{ result.sources.length }}</p>
+            </div>
             <el-tag :type="result.insufficient_context ? 'warning' : 'success'">
               {{ result.insufficient_context ? t('knowledgeAsk.insufficientContextTag') : t('knowledgeAsk.citedKnowledgeBase') }}
             </el-tag>
           </div>
-        </template>
 
-        <p class="answer-text">
-          {{ result.answer }}
-        </p>
+          <p class="answer-text">
+            {{ result.answer }}
+          </p>
 
-        <section
-          v-if="result.sources.length > 0"
-          class="sources"
-        >
-          <h3>{{ t('knowledgeAsk.sources') }}</h3>
-          <article
-            v-for="source in result.sources"
-            :key="source.chunk_id"
-            class="source-item"
+          <section
+            v-if="result.sources.length > 0"
+            class="sources"
           >
-            <div class="source-item__title">
-              <el-tag size="small">
-                {{ source.source_id }}
-              </el-tag>
-              <strong>{{ source.file_name }}</strong>
-              <span v-if="source.page_number">{{ t('knowledgeAsk.page', { page: source.page_number }) }}</span>
-              <span>{{ t('knowledgeAsk.similarity', { score: formatSimilarity(source.similarity) }) }}</span>
-            </div>
-            <p>{{ source.excerpt }}</p>
-          </article>
-        </section>
-      </el-card>
+            <h3>{{ t('knowledgeAsk.sources') }}</h3>
+            <article
+              v-for="source in result.sources"
+              :key="source.chunk_id"
+              class="source-item"
+            >
+              <div class="source-item__title">
+                <el-tag size="small" effect="plain">
+                  {{ source.source_id }}
+                </el-tag>
+                <strong>{{ source.file_name }}</strong>
+                <span v-if="source.page_number">{{ t('knowledgeAsk.page', { page: source.page_number }) }}</span>
+                <span>{{ t('knowledgeAsk.similarity', { score: formatSimilarity(source.similarity) }) }}</span>
+              </div>
+              <p>{{ source.excerpt }}</p>
+            </article>
+          </section>
+
+          <el-empty
+            v-else
+            :description="t('knowledgeAsk.noSources')"
+            :image-size="80"
+          />
+        </el-card>
+
+        <el-card
+          v-else
+          shadow="never"
+          class="answer-card answer-card--empty"
+        >
+          <el-empty
+            :description="t('knowledgeAsk.noAnswer')"
+            :image-size="96"
+          />
+        </el-card>
+      </section>
     </main>
   </div>
 </template>
@@ -195,34 +270,65 @@ onMounted(loadDocuments)
 <style scoped>
 .knowledge-ask {
   min-height: 100vh;
-  background: #f5f7fa;
+  background: var(--cm-bg-secondary);
 }
 
-.knowledge-ask__header {
+.knowledge-ask__hero {
+  background: var(--cm-bg-elevated);
+  border-bottom: 1px solid var(--cm-border-light);
+}
+
+.knowledge-ask__hero-inner {
   display: flex;
-  align-items: flex-start;
-  gap: 24px;
-  padding: 24px 40px;
-  background: white;
-  border-bottom: 1px solid var(--el-border-color-light);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cm-space-6);
+  padding-top: var(--cm-space-8);
+  padding-bottom: var(--cm-space-8);
 }
 
-.knowledge-ask__header h1 {
-  margin: 0 0 6px;
-  font-size: 24px;
+.knowledge-ask__hero-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--cm-space-4);
 }
 
-.knowledge-ask__header p {
+.knowledge-ask__back {
+  padding-left: 0;
+  margin-bottom: var(--cm-space-3);
+}
+
+.knowledge-ask__hero h1 {
   margin: 0;
-  color: var(--el-text-color-secondary);
+  font-size: var(--cm-text-4xl);
+  font-weight: var(--cm-font-bold);
+}
+
+.knowledge-ask__hero p {
+  margin-top: var(--cm-space-3);
+  color: var(--cm-text-secondary);
 }
 
 .knowledge-ask__main {
   display: grid;
-  gap: 20px;
-  width: min(960px, calc(100% - 40px));
-  margin: 24px auto;
-  padding-bottom: 40px;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: var(--cm-space-6);
+  padding-top: var(--cm-space-8);
+  padding-bottom: var(--cm-space-16);
+}
+
+.knowledge-panel,
+.ask-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cm-space-5);
+}
+
+.knowledge-card,
+.question-card,
+.answer-card {
+  border: 1px solid var(--cm-border-light);
+  border-radius: var(--cm-radius-lg);
 }
 
 .card-header,
@@ -231,47 +337,95 @@ onMounted(loadDocuments)
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--cm-space-3);
+}
+
+.card-header {
+  margin-bottom: var(--cm-space-5);
+}
+
+.card-header strong {
+  color: var(--cm-text-primary);
+  font-size: var(--cm-text-base);
+}
+
+.card-header p {
+  margin-top: var(--cm-space-1);
+  color: var(--cm-text-secondary);
+  font-size: var(--cm-text-sm);
 }
 
 .document-options {
   display: grid;
-  gap: 12px;
+  gap: var(--cm-space-3);
 }
 
 .document-options :deep(.el-checkbox) {
   width: 100%;
   margin: 0;
+  height: auto;
+  padding: var(--cm-space-3);
+  border-radius: var(--cm-radius-md);
+}
+
+.document-options :deep(.el-checkbox__label) {
+  min-width: 0;
+}
+
+.document-option {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--cm-space-1);
+}
+
+.document-option strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.document-option small {
+  color: var(--cm-text-tertiary);
+}
+
+.scope-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cm-space-2);
+  margin-top: var(--cm-space-4);
 }
 
 .ask-actions {
-  margin-top: 16px;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
+  margin-top: var(--cm-space-4);
+  color: var(--cm-text-secondary);
+  font-size: var(--cm-text-sm);
 }
 
 .answer-text {
   margin: 0;
   line-height: 1.8;
   white-space: pre-wrap;
+  color: var(--cm-text-primary);
 }
 
 .sources {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--el-border-color-light);
+  margin-top: var(--cm-space-6);
+  padding-top: var(--cm-space-5);
+  border-top: 1px solid var(--cm-border-light);
 }
 
 .sources h3 {
-  margin: 0 0 12px;
-  font-size: 16px;
+  margin: 0 0 var(--cm-space-3);
+  font-size: var(--cm-text-base);
 }
 
 .source-item {
-  padding: 14px;
-  margin-top: 10px;
-  background: var(--el-fill-color-light);
-  border-radius: 8px;
+  padding: var(--cm-space-4);
+  margin-top: var(--cm-space-3);
+  background: var(--cm-bg-secondary);
+  border: 1px solid var(--cm-border-light);
+  border-radius: var(--cm-radius-md);
 }
 
 .source-item__title {
@@ -280,19 +434,35 @@ onMounted(loadDocuments)
 }
 
 .source-item__title span {
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
+  color: var(--cm-text-secondary);
+  font-size: var(--cm-text-sm);
 }
 
 .source-item p {
-  margin: 10px 0 0;
-  color: var(--el-text-color-regular);
+  margin: var(--cm-space-3) 0 0;
+  color: var(--cm-text-secondary);
   line-height: 1.6;
 }
 
+@media (max-width: 960px) {
+  .knowledge-ask__main {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 640px) {
-  .knowledge-ask__header {
-    padding: 18px 16px;
+  .knowledge-ask__hero-inner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .knowledge-ask__hero h1 {
+    font-size: var(--cm-text-3xl);
+  }
+
+  .ask-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 </style>

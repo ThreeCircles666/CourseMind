@@ -1,37 +1,74 @@
-# CourseMind - AI 驱动的学习画布
+# CourseMind - AI 学习画布
 
 语言：[English](README.md) | [简体中文](README.zh-CN.md)
 
-> 把课件变成可追问、可溯源、可复习的知识画布。
+> **CourseMind：从课件到笔记、追问、自测与复习重点，一站式生成你的 AI 学习画布。**
 
-CourseMind 是一个面向学生复习场景的 AI 教学辅助平台。用户上传 TXT、Markdown 或 PDF 课件后，系统会解析文档、生成向量索引，并通过 RAG 问答和学习画布把资料转化为可追问的知识卡片。界面支持简体中文和 English，用户可在页面右上角随时选择语言。
+CourseMind 是一个面向学生和教学场景的 AI 学习工作流平台。它可以把上传的课程资料转化为可追溯的知识库回答、学习卡片、AI 对话、自测题和复习重点。产品围绕完整学习路径设计：上传/管理课程文档，基于知识库提问，在学习画布中组织内容，并通过 AI 对话继续辅助学习。
+
+## 当前版本亮点
+
+- 已完成 8 个核心页面的页面级 UI/UX 优化。
+- 所有页面都提供语言选择器。
+- AI 回答会跟随 CourseMind 当前界面语言。
+- 中英文文案通过 `vue-i18n` 维护，避免大量硬编码。
+- 新增统一设计令牌，统一颜色、间距、卡片、按钮和页面节奏。
+- Devpost 提交材料已整理到 `submission/devpost/`。
 
 ## 核心功能
 
-### 学习画布
+### AI 学习画布
 
-- AI 从上传课件中提炼 6-10 个复习知识点。
-- 用卡片标签区分定义、公式、例子、易错点和高频考点。
-- 支持点击单个知识点继续追问。
+- 从上传课件中提炼复习知识点。
+- 用卡片组织定义、公式、例子、易错点和考试重点。
+- 支持围绕单个知识点继续追问。
 - 追问回答会作为子卡片回写到画布，形成个人学习脉络。
 - 多次追问的知识点会自动标记为易忘点。
-- 真实生成结果显示来源文件、页码和原文片段。
-- AI 生成失败时自动回退到演示结构，保证演示不中断。
+- 在可用时展示来源文件、页码和原文片段。
+- 内置演示模式 fallback，方便稳定展示完整工作流。
 
 ### 知识库问答
 
-- 支持上传 TXT、Markdown、PDF。
-- 自动解析、分块、向量化并写入 PostgreSQL + pgvector。
-- 基于用户选择的文档进行 RAG 问答。
-- 回答必须基于检索来源，并显示引用和相似度。
-- 后端会区分资料不足、部分回答和完整回答。
+- 支持上传 TXT、Markdown 和可复制文本的 PDF。
+- 自动解析、分块、向量化并存入 PostgreSQL + pgvector。
+- 基于用户选择的文档进行检索增强问答。
+- 展示引用来源和相似度信息。
+- 区分完整回答、部分回答和资料不足。
+- 根据当前界面语言返回中文或英文答案。
 
-### 用户与语言选择
+### AI 对话
 
-- 支持注册、登录、访问令牌刷新和文档所有权隔离。
-- 前端使用 `vue-i18n`，内置 `zh-CN` 和 `en-US`。
-- 语言选择器为全局控件，登录页、首页、知识库、问答和学习画布均可切换。
-- 语言选择会保存到浏览器本地存储，下次打开自动沿用。
+- 提供专注的学习辅助对话界面。
+- 支持会话历史、会话切换、重命名和删除。
+- 支持流式输出。
+- 使用当前界面语言作为 AI 回答语言。
+
+### 文档管理
+
+- 上传和管理课程资料。
+- 展示解析和索引状态。
+- 支持刷新、删除等基础操作。
+- 按登录用户隔离文档所有权。
+
+### 国际化体验
+
+- 内置 `zh-CN` 和 `en-US` 两套语言包。
+- 首页、登录、注册、文档管理、知识库问答、学习画布、AI 对话和关于页均可切换语言。
+- 语言选择会保存到浏览器本地。
+- 主要 AI 工作流会接收当前语言，并按该语言作答。
+
+## 页面
+
+| 路由 | 页面 |
+| --- | --- |
+| `/` | 学习工作台 / 首页 |
+| `/login` | 登录 |
+| `/register` | 注册 |
+| `/documents` | 文档管理 |
+| `/knowledge-ask` | 知识库问答 |
+| `/canvas` | 学习画布 |
+| `/chat` | AI 对话 |
+| `/about` | 产品说明与系统状态 |
 
 ## 快速启动
 
@@ -40,7 +77,7 @@ CourseMind 是一个面向学生复习场景的 AI 教学辅助平台。用户�
 - Docker 20.10+
 - Docker Compose 2.0+
 - 4GB+ 可用内存
-- 可选：阿里云 DashScope API Key
+- 可选：阿里云 DashScope API Key，用于真实 AI 流程
 
 ### 使用 Docker 启动
 
@@ -48,9 +85,7 @@ CourseMind 是一个面向学生复习场景的 AI 教学辅助平台。用户�
 git clone https://github.com/ThreeCircles666/CourseMind.git
 cd CourseMind
 
-# 如需真实文档处理和 RAG，请先配置环境变量
 export DASHSCOPE_API_KEY=sk-your-key-here
-
 docker compose up --build
 ```
 
@@ -72,38 +107,32 @@ chmod +x start-docker.sh
 CourseMind 的真实 AI 流程依赖 DashScope：
 
 - `text-embedding-v3` 用于文档向量化。
-- `qwen-turbo` 用于 RAG 问答和画布知识点生成。
+- Qwen 对话模型用于 RAG 问答、AI 对话和学习画布生成。
 
 如果没有配置 `DASHSCOPE_API_KEY`：
 
-- 仍可使用注册、登录、演示画布和部分 fallback 流程。
-- 无法使用真实文档向量化、知识库问答和基于上传文档的画布生成。
-
-推荐用环境变量启动：
-
-```bash
-export DASHSCOPE_API_KEY=sk-your-key-here
-docker compose up --build
-```
+- 注册、登录、优化后的界面、演示画布和 fallback 流程仍可使用。
+- 真实文档向量化、基于资料的知识问答和文档画布生成需要 API Key。
 
 ## 演示流程
 
 1. 打开 http://127.0.0.1:5174。
 2. 注册并登录。
-3. 在右上角选择简体中文或 English。
-4. 进入「知识库」，上传 TXT、Markdown 或可复制文字的 PDF。
-5. 等待文档状态变为「成功」。
-6. 点击「生成画布」，进入学习画布。
-7. 点击「生成学习画布」，查看基于课件的知识卡片。
-8. 点击卡片，在右侧详情区继续追问或生成自测题。
+3. 在语言选择器中选择中文或 English。
+4. 进入「文档管理」，上传 TXT、Markdown 或可复制文本的 PDF。
+5. 等待文档状态变为成功。
+6. 进入「知识库问答」，提问并查看引用来源。
+7. 打开「学习画布」，基于文档生成学习卡片。
+8. 选择卡片继续追问，并生成自测题。
+9. 打开「AI 对话」，验证回答会跟随当前界面语言。
 
-没有 API Key 时，可直接在学习画布点击「加载演示画布」体验完整交互。
+没有 API Key 时，可以使用学习画布的演示路径展示完整交互。
 
 ## 技术架构
 
 ### 技术栈
 
-- 前端：Vue 3、TypeScript、Vite、Element Plus、vue-i18n
+- 前端：Vue 3、TypeScript、Vite、Vue Router、Pinia、Element Plus、vue-i18n
 - 后端：Python 3.11、FastAPI、SQLAlchemy、Alembic
 - 数据库：PostgreSQL 17、pgvector
 - AI：DashScope Qwen、DashScope `text-embedding-v3`
@@ -134,24 +163,27 @@ CourseMind/
 ├── frontend/
 │   ├── src/
 │   │   ├── api/              # 前端 API 客户端
+│   │   ├── assets/           # 设计令牌和全局样式
+│   │   ├── components/       # 复用组件
+│   │   ├── composables/      # 流式对话等复用逻辑
 │   │   ├── i18n/             # zh-CN / en-US 语言包
-│   │   ├── stores/           # 登录状态
+│   │   ├── stores/           # 登录和应用状态
 │   │   └── views/            # 页面组件
 │   └── Dockerfile
 ├── backend/
 │   ├── app/
-│   │   ├── ai/               # DashScope 适配器
+│   │   ├── ai/               # AI 契约和适配器
 │   │   ├── api/              # FastAPI 路由
 │   │   ├── models/           # 数据库模型
 │   │   ├── parsers/          # TXT / Markdown / PDF 解析
 │   │   └── services/         # RAG、检索、上传、摄取逻辑
 │   ├── alembic/              # 数据库迁移
 │   └── Dockerfile
+├── submission/devpost/       # Hackathon 提交包
 ├── docker-compose.yml
 ├── start-docker.sh
-├── DEMO_SCRIPT.md
-├── README.md             # English
-└── README.zh-CN.md       # 简体中文
+├── README.md                 # English
+└── README.zh-CN.md           # 简体中文
 ```
 
 ## 本地开发
@@ -178,25 +210,38 @@ npm run dev
 
 本地 Vite 默认端口通常是 http://localhost:5173；Docker 版前端端口是 http://127.0.0.1:5174。
 
-## 当前边界
-
-- 支持 TXT、Markdown、PDF；暂不支持 PPTX、DOCX 和图片 OCR。
-- PDF 需要是可复制文本的 PDF，扫描版或特殊字体编码可能无法解析。
-- 学习画布当前是卡片网格，不是真正无限画布。
-- 易忘点基于追问次数标记，尚未实现长期学习画像。
-- RAG 回答只基于上传资料，不进行联网搜索。
-
 ## 测试与检查
 
 ```bash
-# 前端类型检查
+# 前端类型检查和生产构建
 cd frontend
 npm run type-check
+npm run build
 
 # 后端测试，需要本地安装测试依赖
 cd backend
 .venv/bin/python -m pytest
 ```
+
+## Hackathon 提交材料
+
+Devpost 提交包位于 `submission/devpost/`：
+
+- `DEVPOST_SUBMISSION.md`
+- `JUDGE_TESTING_INSTRUCTIONS.md`
+- `DEMO_VIDEO_SCRIPT.md`
+- `PITCH_DECK_OUTLINE.md`
+- `AI_USAGE_AND_DISCLOSURE.md`
+- `SUBMISSION_CHECKLIST.md`
+- `CourseMind_AI_Builders_Hackathon_Deck_v2.pptx`
+
+## 当前边界
+
+- 支持 TXT、Markdown、可复制文本的 PDF；暂不支持 PPTX、DOCX 和图片 OCR。
+- 扫描版 PDF 或特殊字体编码的 PDF 可能无法解析。
+- 学习画布当前是结构化卡片工作区，不是真正无限自由画布。
+- 易忘点基于交互频率标记，尚未实现长期学习画像。
+- RAG 回答只基于上传资料，不进行联网搜索。
 
 ## 文档
 

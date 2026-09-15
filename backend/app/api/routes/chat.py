@@ -143,6 +143,7 @@ async def chat_stream(
                 messages=ai_messages,
                 user_nickname=current_user.nickname,
                 model="qwen3.8-flash",
+                response_language=request.response_language,
             )
 
             # Stream from AI control layer

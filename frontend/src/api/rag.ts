@@ -22,12 +22,14 @@ export interface RagAnswer {
 export async function askKnowledgeBase(
   question: string,
   documentIds: string[],
+  responseLanguage = 'zh-CN',
 ): Promise<RagAnswer> {
   return apiRequest<RagAnswer>('/api/v1/rag/ask', {
     method: 'POST',
     body: JSON.stringify({
       question,
       document_ids: documentIds,
+      response_language: responseLanguage,
       top_k: 5,
     }),
   })

@@ -3,12 +3,15 @@ import { ref, nextTick, watch, onMounted } from 'vue'
 import { useStreamChat } from '@/composables/useStreamChat'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as chatApi from '@/api/chat'
 import type { SessionSummary } from '@/api/chat'
+import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
+const { t } = useI18n()
 const { 
   messages, 
   currentSessionId, 
@@ -57,18 +60,18 @@ async function handleSessionClick(sessionId: number) {
     await loadSession(sessionId)
     await scrollToBottom()
   } catch (err) {
-    ElMessage.error('加载会话失败')
+    ElMessage.error(t('chat.loadSessionFailed'))
   }
 }
 
 async function handleNewChat() {
   startNewSession()
-  ElMessage.success('已开始新对话')
+  ElMessage.success(t('chat.newSessionSuccess'))
 }
 
 async function handleSend() {
   if (!inputMessage.value.trim()) {
-    ElMessage.warning('请输入消息')
+    ElMessage.warning(t('chat.inputRequired'))
     return
   }
 
@@ -97,22 +100,22 @@ function handleCancel() {
 
 async function handleRenameSession(session: SessionSummary) {
   try {
-    const { value } = await ElMessageBox.prompt('请输入新的会话标题', '重命名会话', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    const { value } = await ElMessageBox.prompt(t('chat.renamePrompt'), t('chat.renameSession'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       inputValue: session.title,
       inputPattern: /.+/,
-      inputErrorMessage: '标题不能为空',
+      inputErrorMessage: t('chat.renamePlaceholder'),
     })
     
     if (value) {
       await chatApi.renameSession(session.id, value)
-      ElMessage.success('重命名成功')
+      ElMessage.success(t('chat.renameSuccess'))
       await refreshSessions()
     }
   } catch (err) {
     if (err !== 'cancel') {
-      ElMessage.error('重命名失败')
+      ElMessage.error(t('chat.renameFailed'))
     }
   }
 }
@@ -120,17 +123,17 @@ async function handleRenameSession(session: SessionSummary) {
 async function handleDeleteSession(session: SessionSummary) {
   try {
     await ElMessageBox.confirm(
-      `确定要删除会话「${session.title}」吗？`,
-      '删除会话',
+      t('chat.deleteConfirm'),
+      t('chat.deleteSession'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
         type: 'warning',
       }
     )
     
     await chatApi.deleteSession(session.id)
-    ElMessage.success('删除成功')
+    ElMessage.success(t('chat.deleteSuccess'))
     
     if (currentSessionId.value === session.id) {
       startNewSession()
@@ -139,7 +142,7 @@ async function handleDeleteSession(session: SessionSummary) {
     await refreshSessions()
   } catch (err) {
     if (err !== 'cancel') {
-      ElMessage.error('删除失败')
+      ElMessage.error(t('chat.deleteFailed'))
     }
   }
 }
@@ -168,7 +171,7 @@ watch(
           v-if="!sidebarCollapsed"
           class="chat-sidebar__title"
         >
-          会话历史
+          {{ t('chat.sessionHistory') }}
         </h3>
         <el-button 
           v-if="!sidebarCollapsed"
@@ -177,11 +180,11 @@ watch(
           :disabled="isLoading"
           @click="handleNewChat"
         >
-          新建会话
+          {{ t('chat.newSession') }}
         </el-button>
         <el-tooltip
           v-else
-          content="新建会话"
+          :content="t('chat.newSession')"
           placement="right"
         >
           <el-button 
@@ -223,7 +226,7 @@ watch(
               {{ session.title }}
             </div>
             <div class="chat-sidebar__item-meta">
-              {{ session.message_count }} 条消息 · 
+              {{ t('chat.messageCount', { count: session.message_count }) }} · 
               {{ new Date(session.updated_at).toLocaleDateString() }}
             </div>
           </div>
@@ -233,7 +236,7 @@ watch(
               text
               @click.stop="handleRenameSession(session)"
             >
-              重命名
+              {{ t('chat.renameButton') }}
             </el-button>
             <el-button
               size="small"
@@ -241,14 +244,14 @@ watch(
               type="danger"
               @click.stop="handleDeleteSession(session)"
             >
-              删除
+              {{ t('chat.deleteButton') }}
             </el-button>
           </div>
         </div>
         
         <el-empty
           v-if="!loadingSessions && sessions.length === 0"
-          description="还没有历史会话"
+          :description="t('chat.emptyHistory')"
           :image-size="80"
         />
       </div>
@@ -259,7 +262,7 @@ watch(
           :icon="sidebarCollapsed ? 'ArrowRight' : 'ArrowLeft'"
           @click="toggleSidebar"
         >
-          {{ sidebarCollapsed ? '' : '收起' }}
+          {{ sidebarCollapsed ? '' : t('chat.collapse') }}
         </el-button>
       </div>
     </div>
@@ -290,23 +293,25 @@ watch(
                     d="m237.248 512 265.408 265.344a32 32 0 0 1-45.312 45.312l-288-288a32 32 0 0 1 0-45.312l288-288a32 32 0 1 1 45.312 45.312L237.248 512z"
                   /></svg>
                 </el-icon>
-                返回
+                {{ t('common.back') }}
               </el-button>
               <div>
                 <h2 class="chat__title">
-                  AI 聊天助手
+                  {{ t('chat.title') }}
                 </h2>
                 <p class="chat__subtitle">
-                  {{ auth.user?.nickname }} · 基于阿里云百炼 Qwen 模型
+                  {{ auth.user?.nickname }} · {{ t('chat.subtitle') }}
                   <span
                     v-if="currentSessionId"
                     class="chat__session-id"
                   >
-                    · 会话 #{{ currentSessionId }}
+                    · {{ t('chat.sessionHistory') }} #{{ currentSessionId }}
                   </span>
                 </p>
               </div>
             </div>
+            
+            <LocaleSwitcher />
           </div>
         </template>
 
@@ -318,7 +323,7 @@ watch(
             v-if="messages.length === 0"
             class="chat__empty"
           >
-            <el-empty description="还没有消息，开始对话吧" />
+            <el-empty :description="t('chat.emptySession')" />
           </div>
 
           <div
@@ -328,16 +333,16 @@ watch(
           >
             <div class="chat__message-avatar">
               <el-avatar :size="36">
-                {{ msg.role === 'user' ? '我' : 'AI' }}
+                {{ msg.role === 'user' ? t('chat.userAvatar') : t('chat.aiAvatar') }}
               </el-avatar>
             </div>
             <div class="chat__message-content">
               <div class="chat__message-role">
-                {{ msg.role === 'user' ? '用户' : 'AI 助手' }}
+                {{ msg.role === 'user' ? t('chat.user') : t('chat.assistant') }}
                 <span
                   v-if="msg.isStreaming"
                   class="chat__streaming-indicator"
-                >正在输入...</span>
+                >{{ t('chat.streaming') }}</span>
               </div>
               <div class="chat__message-text">
                 {{ msg.content }}
@@ -362,7 +367,7 @@ watch(
               v-model="inputMessage"
               type="textarea"
               :rows="3"
-              placeholder="输入您的消息..."
+              :placeholder="t('chat.inputPlaceholder')"
               :disabled="isLoading"
               @keydown.enter.ctrl="handleSend"
               @keydown.enter.meta="handleSend"
@@ -372,7 +377,7 @@ watch(
                 size="small"
                 type="info"
               >
-                按 Ctrl+Enter 或 Command+Enter 发送
+                {{ t('chat.inputHint') }}
               </el-text>
               <div class="chat__buttons">
                 <el-button
@@ -380,7 +385,7 @@ watch(
                   type="warning"
                   @click="handleCancel"
                 >
-                  取消
+                  {{ t('chat.cancel') }}
                 </el-button>
                 <el-button
                   type="primary"
@@ -388,7 +393,7 @@ watch(
                   :disabled="!inputMessage.trim()"
                   @click="handleSend"
                 >
-                  发送
+                  {{ t('chat.send') }}
                 </el-button>
               </div>
             </div>
@@ -404,15 +409,16 @@ watch(
   display: flex;
   height: 100vh;
   overflow: hidden;
+  background: var(--cm-bg-secondary);
 }
 
 .chat-sidebar {
-  width: 300px;
-  border-right: 1px solid var(--el-border-color);
+  width: 280px;
+  border-right: 1px solid var(--cm-border-light);
   display: flex;
   flex-direction: column;
-  background-color: var(--el-bg-color);
-  transition: width 0.3s ease;
+  background: var(--cm-bg-elevated);
+  transition: width var(--cm-transition-base);
   position: relative;
 }
 
@@ -421,57 +427,61 @@ watch(
 }
 
 .chat-sidebar__header {
-  padding: 20px;
-  border-bottom: 1px solid var(--el-border-color);
+  padding: var(--cm-space-5);
+  border-bottom: 1px solid var(--cm-border-light);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--cm-space-3);
   min-height: 80px;
 }
 
 .chat-sidebar--collapsed .chat-sidebar__header {
   justify-content: center;
-  padding: 20px 10px;
+  padding: var(--cm-space-5) var(--cm-space-2);
 }
 
 .chat-sidebar__title {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--cm-text-lg);
+  font-weight: var(--cm-font-semibold);
+  color: var(--cm-text-primary);
 }
 
 .chat-sidebar__list {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: var(--cm-space-2);
 }
 
 .chat-sidebar__toggle {
-  padding: 12px;
-  border-top: 1px solid var(--el-border-color);
+  padding: var(--cm-space-3);
+  border-top: 1px solid var(--cm-border-light);
   text-align: center;
 }
 
 .chat-sidebar__item {
-  padding: 12px;
-  margin-bottom: 4px;
-  border-radius: 8px;
+  padding: var(--cm-space-3);
+  margin-bottom: var(--cm-space-1);
+  border-radius: var(--cm-radius-md);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all var(--cm-transition-fast);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--cm-space-2);
+  border: 1px solid transparent;
 }
 
 .chat-sidebar__item:hover {
-  background-color: var(--el-fill-color-light);
+  background: var(--cm-bg-tertiary);
+  border-color: var(--cm-border-light);
 }
 
 .chat-sidebar__item--active {
-  background-color: var(--el-color-primary-light-9);
-  border: 1px solid var(--el-color-primary-light-7);
+  background: var(--cm-primary-light);
+  border-color: var(--cm-primary);
+  color: var(--cm-primary-dark);
 }
 
 .chat-sidebar__item-content {
@@ -480,22 +490,23 @@ watch(
 }
 
 .chat-sidebar__item-title {
-  font-size: 14px;
-  font-weight: 500;
-  margin-bottom: 4px;
+  font-size: var(--cm-text-sm);
+  font-weight: var(--cm-font-medium);
+  margin-bottom: var(--cm-space-1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--cm-text-primary);
 }
 
 .chat-sidebar__item-meta {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
+  font-size: var(--cm-text-xs);
+  color: var(--cm-text-tertiary);
 }
 
 .chat-sidebar__item-actions {
   display: none;
-  gap: 4px;
+  gap: var(--cm-space-1);
 }
 
 .chat-sidebar__item:hover .chat-sidebar__item-actions {
@@ -507,6 +518,7 @@ watch(
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--cm-bg-secondary);
 }
 
 .chat__card {
@@ -516,6 +528,12 @@ watch(
   margin: 0;
   border-radius: 0;
   border: none;
+  background: var(--cm-bg-elevated);
+}
+
+.chat__card :deep(.el-card__header) {
+  border-bottom: 1px solid var(--cm-border-light);
+  background: var(--cm-bg-elevated);
 }
 
 .chat__card :deep(.el-card__body) {
@@ -530,40 +548,43 @@ watch(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--cm-space-4);
 }
 
 .chat__header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--cm-space-4);
 }
 
 .chat__back-button {
-  font-size: 14px;
-  padding: 8px 12px;
+  font-size: var(--cm-text-sm);
+  padding: var(--cm-space-2) var(--cm-space-3);
 }
 
 .chat__title {
-  margin: 0 0 4px 0;
-  font-size: 20px;
+  margin: 0 0 var(--cm-space-1) 0;
+  font-size: var(--cm-text-xl);
+  font-weight: var(--cm-font-semibold);
+  color: var(--cm-text-primary);
 }
 
 .chat__subtitle {
   margin: 0;
-  font-size: 14px;
-  color: var(--el-text-color-secondary);
+  font-size: var(--cm-text-sm);
+  color: var(--cm-text-secondary);
 }
 
 .chat__session-id {
-  color: var(--el-color-primary);
+  color: var(--cm-primary);
+  font-weight: var(--cm-font-medium);
 }
 
 .chat__container {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
-  background-color: var(--el-fill-color-light);
+  padding: var(--cm-space-6);
+  background: var(--cm-bg-secondary);
 }
 
 .chat__empty {
@@ -575,8 +596,8 @@ watch(
 
 .chat__message {
   display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: var(--cm-space-3);
+  margin-bottom: var(--cm-space-6);
 }
 
 .chat__message--user {
@@ -585,7 +606,7 @@ watch(
 
 .chat__message-content {
   flex: 1;
-  max-width: 70%;
+  max-width: 75%;
 }
 
 .chat__message--user .chat__message-content {
@@ -595,51 +616,76 @@ watch(
 }
 
 .chat__message-role {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  margin-bottom: 6px;
+  font-size: var(--cm-text-xs);
+  color: var(--cm-text-tertiary);
+  margin-bottom: var(--cm-space-2);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--cm-space-2);
+  font-weight: var(--cm-font-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .chat__streaming-indicator {
-  color: var(--el-color-primary);
-  font-weight: 500;
+  color: var(--cm-primary);
+  font-weight: var(--cm-font-medium);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .chat__message-text {
-  padding: 12px 16px;
-  border-radius: 8px;
-  line-height: 1.6;
+  padding: var(--cm-space-4);
+  border-radius: var(--cm-radius-lg);
+  line-height: var(--cm-leading-relaxed);
   white-space: pre-wrap;
   word-break: break-word;
+  box-shadow: var(--cm-shadow-sm);
 }
 
 .chat__message--user .chat__message-text {
-  background-color: var(--el-color-primary);
+  background: var(--cm-primary);
   color: white;
+  border: none;
 }
 
 .chat__message--assistant .chat__message-text {
-  background-color: white;
-  border: 1px solid var(--el-border-color);
+  background: var(--cm-bg-elevated);
+  color: var(--cm-text-primary);
+  border: 1px solid var(--cm-border-light);
 }
 
 .chat__input-area {
-  padding: 20px;
-  border-top: 1px solid var(--el-border-color);
-  background-color: white;
+  padding: var(--cm-space-5);
+  border-top: 1px solid var(--cm-border-light);
+  background: var(--cm-bg-elevated);
 }
 
 .chat__error {
-  margin-bottom: 12px;
+  margin-bottom: var(--cm-space-3);
 }
 
 .chat__input-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--cm-space-3);
+}
+
+.chat__input-wrapper :deep(.el-textarea__inner) {
+  border-radius: var(--cm-radius-md);
+  border: 1px solid var(--cm-border-light);
+  padding: var(--cm-space-3);
+  font-size: var(--cm-text-base);
+  line-height: var(--cm-leading-relaxed);
+}
+
+.chat__input-wrapper :deep(.el-textarea__inner):focus {
+  border-color: var(--cm-primary);
+  box-shadow: 0 0 0 3px var(--cm-primary-light);
 }
 
 .chat__actions {
@@ -650,6 +696,74 @@ watch(
 
 .chat__buttons {
   display: flex;
-  gap: 8px;
+  gap: var(--cm-space-2);
+}
+
+@media (max-width: 768px) {
+  .chat-sidebar {
+    width: 240px;
+  }
+
+  .chat-sidebar--collapsed {
+    width: 0;
+    border-right: none;
+  }
+
+  .chat-sidebar__header {
+    padding: var(--cm-space-4);
+  }
+
+  .chat__message-content {
+    max-width: 85%;
+  }
+
+  .chat__input-area {
+    padding: var(--cm-space-4);
+  }
+
+  .chat__actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--cm-space-2);
+  }
+
+  .chat__buttons {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .chat-sidebar {
+    position: absolute;
+    z-index: 100;
+    height: 100%;
+    width: 280px;
+    transform: translateX(-100%);
+    transition: transform var(--cm-transition-base);
+  }
+
+  .chat-sidebar:not(.chat-sidebar--collapsed) {
+    transform: translateX(0);
+    box-shadow: var(--cm-shadow-lg);
+  }
+
+  .chat__message-content {
+    max-width: 90%;
+  }
+
+  .chat__header-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--cm-space-2);
+  }
+
+  .chat__title {
+    font-size: var(--cm-text-lg);
+  }
+
+  .chat__subtitle {
+    font-size: var(--cm-text-xs);
+  }
 }
 </style>

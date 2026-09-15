@@ -1,4 +1,5 @@
 import { ref, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { authenticatedFetch } from '@/api/client'
 import * as chatApi from '@/api/chat'
 
@@ -10,6 +11,7 @@ export interface Message {
 }
 
 export function useStreamChat() {
+  const { locale } = useI18n()
   const messages = ref<Message[]>([])
   const currentSessionId = ref<number | null>(null)
   const isLoading = ref(false)
@@ -62,6 +64,7 @@ export function useStreamChat() {
         body: JSON.stringify({
           message: userMessage,
           session_id: currentSessionId.value,
+          response_language: locale.value,
         }),
         signal: abortController.value.signal,
       })

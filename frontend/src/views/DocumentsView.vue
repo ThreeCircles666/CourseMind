@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { UploadRawFile, UploadUserFile } from 'element-plus'
 import * as documentsApi from '@/api/documents'
 import type { Document } from '@/api/documents'
+import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 
 // Define document status type based on backend schema
 type DocumentStatus = 'pending' | 'processing' | 'succeeded' | 'failed'
@@ -26,6 +27,13 @@ const statusMap: Record<DocumentStatus, { type: 'info' | 'warning' | 'success' |
   succeeded: { type: 'success' },
   failed: { type: 'danger' },
 }
+
+const totalDocuments = computed(() => documents.value.length)
+const readyDocuments = computed(() => documents.value.filter((doc) => doc.status === 'succeeded').length)
+const processingDocuments = computed(() =>
+  documents.value.filter((doc) => doc.status === 'pending' || doc.status === 'processing').length,
+)
+const failedDocuments = computed(() => documents.value.filter((doc) => doc.status === 'failed').length)
 
 const mimeTypeMap: Record<string, string> = {
   'text/plain': 'TXT',
@@ -416,44 +424,32 @@ function goToCanvas(doc: Document) {
 
 <template>
   <div class="documents-layout">
-    <el-card
-      class="documents__card"
-      shadow="never"
-    >
-      <template #header>
-        <div class="documents__header">
-          <div class="documents__header-left">
-            <el-button
-              text
-              class="documents__back-button"
-              @click="handleBack"
-            >
-              <el-icon>
-                <svg
-                  viewBox="0 0 1024 1024"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    fill="currentColor"
-                    d="M224 480h640a32 32 0 1 1 0 64H224a32 32 0 0 1 0-64z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="m237.248 512 265.408 265.344a32 32 0 0 1-45.312 45.312l-288-288a32 32 0 0 1 0-45.312l288-288a32 32 0 1 1 45.312 45.312L237.248 512z"
-                  />
-                </svg>
-              </el-icon>
-              {{ t('common.back') }}
-            </el-button>
-            <div>
-              <h2 class="documents__title">
-                {{ t('documents.title') }}
-              </h2>
-              <p class="documents__subtitle">
-                {{ t('documents.subtitle') }}
-              </p>
-            </div>
-          </div>
+    <header class="documents-hero">
+      <div class="cm-container documents-hero__inner">
+        <div class="documents-hero__copy">
+          <el-button
+            text
+            class="documents__back-button"
+            @click="handleBack"
+          >
+            <el-icon>
+              <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+                <path fill="currentColor" d="M224 480h640a32 32 0 1 1 0 64H224a32 32 0 0 1 0-64z"/>
+                <path fill="currentColor" d="m237.248 512 265.408 265.344a32 32 0 0 1-45.312 45.312l-288-288a32 32 0 0 1 0-45.312l288-288a32 32 0 1 1 45.312 45.312L237.248 512z"/>
+              </svg>
+            </el-icon>
+            {{ t('common.back') }}
+          </el-button>
+          <h1 class="documents__title">
+            {{ t('documents.title') }}
+          </h1>
+          <p class="documents__subtitle">
+            {{ t('documents.subtitle') }}
+          </p>
+        </div>
+        
+        <div class="documents-hero__actions">
+          <LocaleSwitcher />
           <el-button
             :loading="loading"
             :disabled="uploading"
@@ -462,94 +458,112 @@ function goToCanvas(doc: Document) {
             {{ t('common.refresh') }}
           </el-button>
         </div>
-      </template>
+      </div>
+    </header>
 
-      <div class="documents__content">
-        <!-- Upload Section -->
-        <el-card
-          class="documents__upload-card"
-          shadow="hover"
-        >
-          <h3 class="documents__section-title">
-            {{ t('documents.upload.title') }}
-          </h3>
+    <main class="documents-main">
+      <div class="cm-container">
+        <section class="documents-stats">
+          <div class="stat-card cm-card">
+            <span class="stat-label">{{ t('documents.list.title') }}</span>
+            <strong class="stat-value">{{ totalDocuments }}</strong>
+          </div>
+          <div class="stat-card cm-card stat-card--success">
+            <span class="stat-label">{{ t('documents.status.succeeded') }}</span>
+            <strong class="stat-value">{{ readyDocuments }}</strong>
+          </div>
+          <div class="stat-card cm-card stat-card--warning">
+            <span class="stat-label">{{ t('common.processing') }}</span>
+            <strong class="stat-value">{{ processingDocuments }}</strong>
+          </div>
+          <div class="stat-card cm-card stat-card--danger">
+            <span class="stat-label">{{ t('documents.status.failed') }}</span>
+            <strong class="stat-value">{{ failedDocuments }}</strong>
+          </div>
+        </section>
 
-          <el-upload
-            v-model:file-list="fileList"
-            :auto-upload="false"
-            :limit="1"
-            :before-upload="beforeUpload"
-            :disabled="uploading"
-            drag
-            class="documents__upload"
-          >
-            <el-icon class="documents__upload-icon">
-              <svg
-                viewBox="0 0 1024 1024"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  fill="currentColor"
-                  d="M544 864V672h128L512 480 352 672h128v192H320v-1.6c-5.376.32-10.496 1.6-16 1.6A240 240 0 0 1 64 624c0-123.136 93.12-223.488 212.608-237.248A239.808 239.808 0 0 1 512 192a239.872 239.872 0 0 1 235.456 194.752c119.488 13.76 212.48 114.112 212.48 237.248a240 240 0 0 1-240 240c-5.376 0-10.56-1.28-16-1.6v1.6H544z"
-                />
-              </svg>
-            </el-icon>
-            <div class="el-upload__text">
-              {{ t('documents.upload.dragText') }} <em>{{ t('documents.upload.clickText') }}</em>
+        <section class="documents-workspace">
+          <el-card class="documents__upload-card" shadow="never">
+            <div class="section-heading">
+              <h2 class="documents__section-title">
+                {{ t('documents.upload.title') }}
+              </h2>
+              <p>{{ t('documents.upload.supportedFormats') }}</p>
             </div>
-            <template #tip>
-              <div class="el-upload__tip">
-                <p>{{ t('documents.upload.supportedFormats') }}</p>
-                <p>{{ t('documents.upload.sizeLimit') }}</p>
+
+            <el-upload
+              v-model:file-list="fileList"
+              :auto-upload="false"
+              :limit="1"
+              :before-upload="beforeUpload"
+              :disabled="uploading"
+              drag
+              class="documents__upload"
+            >
+              <el-icon class="documents__upload-icon">
+                <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+                  <path fill="currentColor" d="M544 864V672h128L512 480 352 672h128v192H320v-1.6c-5.376.32-10.496 1.6-16 1.6A240 240 0 0 1 64 624c0-123.136 93.12-223.488 212.608-237.248A239.808 239.808 0 0 1 512 192a239.872 239.872 0 0 1 235.456 194.752c119.488 13.76 212.48 114.112 212.48 237.248a240 240 0 0 1-240 240c-5.376 0-10.56-1.28-16-1.6v1.6H544z"/>
+                </svg>
+              </el-icon>
+              <div class="el-upload__text">
+                {{ t('documents.upload.dragText') }} <em>{{ t('documents.upload.clickText') }}</em>
               </div>
-            </template>
-          </el-upload>
+              <template #tip>
+                <div class="el-upload__tip">
+                  <p>{{ t('documents.upload.sizeLimit') }}</p>
+                </div>
+              </template>
+            </el-upload>
 
-          <el-alert
-            :title="t('documents.upload.formatNotice')"
-            type="info"
-            :closable="false"
-            show-icon
-            style="margin-bottom: 20px;"
-          />
+            <el-alert
+              :title="t('documents.upload.formatNotice')"
+              type="info"
+              :closable="false"
+              show-icon
+              class="documents__notice"
+            />
 
-          <div class="documents__upload-actions">
             <el-button
               type="primary"
               size="large"
               :loading="uploading"
               :disabled="fileList.length === 0"
+              class="documents__upload-button"
               @click="handleUpload"
             >
               {{ uploading ? t('documents.upload.uploading') : t('documents.upload.startUpload') }}
             </el-button>
-          </div>
-        </el-card>
+          </el-card>
 
-        <!-- Documents List -->
-        <el-card
-          class="documents__list-card"
-          shadow="hover"
-        >
-          <h3 class="documents__section-title">
-            {{ t('documents.list.title') }}
-          </h3>
+          <el-card class="documents__list-card" shadow="never">
+            <div class="section-heading section-heading--row">
+              <div>
+                <h2 class="documents__section-title">
+                  {{ t('documents.list.title') }}
+                </h2>
+                <p>{{ t('documents.list.availableForUse') }}</p>
+              </div>
+            </div>
 
           <el-table
             v-loading="loading"
             :data="documents"
+            :empty-text="t('documents.list.empty')"
             style="width: 100%"
             stripe
           >
             <el-table-column
               prop="original_name"
               :label="t('documents.list.filename')"
-              min-width="200"
+              min-width="220"
             >
               <template #default="{ row }">
-                <el-text truncated>
-                  {{ row.original_name }}
-                </el-text>
+                <div class="document-name-cell">
+                  <span class="document-file-icon">{{ getFileTypeDisplay(row.mime_type).charAt(0) }}</span>
+                  <el-text truncated>
+                    {{ row.original_name }}
+                  </el-text>
+                </div>
               </template>
             </el-table-column>
 
@@ -576,10 +590,10 @@ function goToCanvas(doc: Document) {
             <el-table-column
               prop="status"
               :label="t('documents.list.status')"
-              width="120"
+              width="130"
             >
               <template #default="{ row }">
-                <el-tag :type="getStatusDisplay(row.status).type">
+                <el-tag :type="getStatusDisplay(row.status).type" effect="light">
                   {{ getStatusDisplay(row.status).text }}
                 </el-tag>
               </template>
@@ -598,7 +612,7 @@ function goToCanvas(doc: Document) {
             <el-table-column
               prop="error_message"
               :label="t('documents.list.notes')"
-              min-width="200"
+              min-width="220"
             >
               <template #default="{ row }">
                 <el-tooltip
@@ -607,10 +621,7 @@ function goToCanvas(doc: Document) {
                   placement="top"
                   popper-class="documents-error-tooltip"
                 >
-                  <el-text
-                    type="danger"
-                    truncated
-                  >
+                  <el-text type="danger" truncated>
                     {{ getUserFriendlyErrorMessage(row.error_message) }}
                   </el-text>
                 </el-tooltip>
@@ -631,12 +642,11 @@ function goToCanvas(doc: Document) {
 
             <el-table-column
               :label="t('documents.list.actions')"
-              width="240"
+              width="250"
               fixed="right"
             >
               <template #default="{ row }">
                 <div class="documents__actions">
-                  <!-- Succeeded: show Ask and Canvas buttons -->
                   <template v-if="row.status === 'succeeded'">
                     <el-button
                       type="primary"
@@ -646,15 +656,12 @@ function goToCanvas(doc: Document) {
                       {{ t('documents.list.goAsk') }}
                     </el-button>
                     <el-button
-                      type="success"
                       size="small"
                       @click="goToCanvas(row)"
                     >
                       {{ t('documents.list.goCanvas') }}
                     </el-button>
                   </template>
-                  
-                  <!-- Failed: show Reprocess button -->
                   <el-button
                     v-if="row.status === 'failed'"
                     type="primary"
@@ -663,8 +670,6 @@ function goToCanvas(doc: Document) {
                   >
                     {{ t('documents.list.reprocess') }}
                   </el-button>
-                  
-                  <!-- Processing: show status text -->
                   <el-text
                     v-if="row.status === 'processing'"
                     type="info"
@@ -672,12 +677,11 @@ function goToCanvas(doc: Document) {
                   >
                     {{ t('common.processing') }}
                   </el-text>
-                  
-                  <!-- Delete button (not for processing) -->
                   <el-button
                     v-if="row.status !== 'processing'"
                     type="danger"
                     size="small"
+                    plain
                     @click="handleDelete(row)"
                   >
                     {{ t('common.delete') }}
@@ -691,112 +695,233 @@ function goToCanvas(doc: Document) {
             v-if="!loading && documents.length === 0"
             :image-size="120"
             :description="t('documents.list.empty')"
+            class="documents__empty"
           />
-        </el-card>
+          </el-card>
+        </section>
       </div>
-    </el-card>
+    </main>
   </div>
 </template>
 
 <style scoped>
 .documents-layout {
-  height: 100vh;
-  overflow: auto;
-  background-color: var(--el-fill-color-light);
-}
-
-.documents__card {
-  margin: 0;
-  border-radius: 0;
-  border: none;
   min-height: 100vh;
+  background: var(--cm-bg-secondary);
 }
 
-.documents__header {
+.documents-hero {
+  background: var(--cm-bg-elevated);
+  border-bottom: 1px solid var(--cm-border-light);
+}
+
+.documents-hero__inner {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--cm-space-6);
+  padding-top: var(--cm-space-8);
+  padding-bottom: var(--cm-space-8);
 }
 
-.documents__header-left {
+.documents-hero__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--cm-space-3);
+}
+
+.documents-hero__actions {
   display: flex;
   align-items: center;
-  gap: 16px;
-  flex: 1;
+  gap: var(--cm-space-4);
 }
 
 .documents__back-button {
-  font-size: 14px;
-  padding: 8px 12px;
+  padding-left: 0;
 }
 
 .documents__title {
-  margin: 0 0 4px 0;
-  font-size: 20px;
+  margin: 0;
+  font-size: var(--cm-text-4xl);
+  font-weight: var(--cm-font-bold);
+  color: var(--cm-text-primary);
 }
 
 .documents__subtitle {
   margin: 0;
-  font-size: 14px;
-  color: var(--el-text-color-secondary);
+  color: var(--cm-text-secondary);
+  line-height: var(--cm-leading-relaxed);
 }
 
-.documents__content {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+.documents-main {
+  padding: var(--cm-space-8) 0 var(--cm-space-16);
+}
+
+.documents-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--cm-space-4);
+  margin-bottom: var(--cm-space-6);
+}
+
+.stat-card {
+  padding: var(--cm-space-5);
+}
+
+.stat-label {
+  display: block;
+  margin-bottom: var(--cm-space-2);
+  color: var(--cm-text-secondary);
+  font-size: var(--cm-text-sm);
+}
+
+.stat-value {
+  color: var(--cm-text-primary);
+  font-size: var(--cm-text-3xl);
+}
+
+.stat-card--success .stat-value {
+  color: var(--cm-success);
+}
+
+.stat-card--warning .stat-value {
+  color: var(--cm-warning);
+}
+
+.stat-card--danger .stat-value {
+  color: var(--cm-danger);
+}
+
+.documents-workspace {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+  gap: var(--cm-space-6);
+  align-items: start;
 }
 
 .documents__upload-card,
 .documents__list-card {
-  border: 1px solid var(--el-border-color-light);
+  border: 1px solid var(--cm-border-light);
+  border-radius: var(--cm-radius-lg);
+}
+
+.section-heading {
+  margin-bottom: var(--cm-space-5);
+}
+
+.section-heading--row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--cm-space-4);
+}
+
+.section-heading p {
+  margin-top: var(--cm-space-2);
+  color: var(--cm-text-secondary);
+  font-size: var(--cm-text-sm);
+  line-height: var(--cm-leading-relaxed);
 }
 
 .documents__section-title {
-  margin: 0 0 20px 0;
-  font-size: 16px;
-  font-weight: 600;
+  margin: 0;
+  font-size: var(--cm-text-xl);
+  font-weight: var(--cm-font-semibold);
 }
 
 .documents__upload {
-  margin-bottom: 20px;
+  margin-bottom: var(--cm-space-5);
 }
 
 .documents__upload-icon {
-  font-size: 67px;
-  color: var(--el-text-color-placeholder);
-  margin-bottom: 16px;
+  font-size: 56px;
+  color: var(--cm-primary);
+  margin-bottom: var(--cm-space-4);
 }
 
 .documents__upload :deep(.el-upload-dragger) {
-  padding: 40px;
+  padding: var(--cm-space-10) var(--cm-space-5);
+  border-radius: var(--cm-radius-lg);
+  background: var(--cm-bg-secondary);
 }
 
 .documents__upload :deep(.el-upload__tip) {
-  margin-top: 12px;
+  margin-top: var(--cm-space-3);
   line-height: 1.6;
 }
 
 .documents__upload :deep(.el-upload__tip p) {
-  margin: 4px 0;
+  margin: var(--cm-space-1) 0;
 }
 
-.documents__upload-actions {
+.documents__notice {
+  margin-bottom: var(--cm-space-5);
+}
+
+.documents__upload-button {
+  width: 100%;
+}
+
+.document-name-cell {
   display: flex;
+  align-items: center;
+  gap: var(--cm-space-3);
+}
+
+.document-file-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--cm-radius-sm);
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  padding-top: 12px;
+  flex-shrink: 0;
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--cm-primary);
+  font-size: var(--cm-text-xs);
+  font-weight: var(--cm-font-bold);
 }
 
 .documents__actions {
   display: flex;
-  gap: 8px;
+  gap: var(--cm-space-2);
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.documents__empty {
+  border-top: 1px solid var(--cm-border-light);
+  margin-top: var(--cm-space-4);
 }
 
 :global(.documents-error-tooltip) {
   max-width: 360px;
   line-height: 1.5;
   white-space: normal;
+}
+
+@media (max-width: 1024px) {
+  .documents-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .documents-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .documents-hero__inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .documents__title {
+    font-size: var(--cm-text-3xl);
+  }
+
+  .documents-stats {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

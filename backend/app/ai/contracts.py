@@ -22,3 +22,4 @@ class ChatContext:
     messages: list[ChatMessage]  # Message history
     user_nickname: str = ""  # Optional user nickname for personalization
     model: str = "qwen3.8-flash"  # Model to use
+    response_language: str = "zh-CN"  # Preferred response language, e.g. zh-CN or en-US
