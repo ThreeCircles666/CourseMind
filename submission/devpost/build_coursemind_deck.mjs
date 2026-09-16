@@ -87,7 +87,7 @@ function addSlide({ title, subtitle, body, footer, notes }, slideNo) {
 const slides = [
   {
     title: "CourseMind",
-    subtitle: "An AI study canvas for course materials",
+    subtitle: "Turn course materials into a canvas that learns with you",
     body: "CourseMind turns uploaded course materials into source-backed Q&A, visual concept cards, follow-up notes, quizzes, and weak-point review.\n\nBuilt for AI Builders Hackathon 2026.",
     footer: "Vue 3, FastAPI, PostgreSQL, pgvector, DashScope Qwen",
     notes: "Submission material based on repository README and Devpost AI Builders Hackathon requirements.",

@@ -1,7 +1,7 @@
 export default {
   common: {
     appName: 'CourseMind',
-    tagline: 'CourseMind: Turn course materials into an AI study canvas for notes, follow-ups, quizzes, and personalized review.',
+    tagline: 'CourseMind: Turn course materials into a canvas that learns with you.',
     welcome: 'Welcome back, {nickname}!',
     logout: 'Logout',
     back: 'Back',
@@ -320,7 +320,7 @@ export default {
   },
   about: {
     title: 'CourseMind',
-    tagline: 'AI-Powered Smart Learning Assistant',
+    tagline: 'CourseMind: Turn course materials into a canvas that learns with you.',
     intro: {
       title: 'Introduction',
       description: 'CourseMind is an AI-powered learning assistant that helps students and learners understand and master course content more efficiently. By uploading course documents, CourseMind automatically generates knowledge cards, provides intelligent Q&A, and creates learning canvases to make the learning process more visual and interactive.',

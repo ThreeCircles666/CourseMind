@@ -2,7 +2,7 @@
 
 Language: [English](README.md) | [简体中文](README.zh-CN.md)
 
-> **CourseMind: Turn course materials into an AI study canvas for notes, follow-ups, quizzes, and personalized review.**
+> **CourseMind: Turn course materials into a canvas that learns with you.**
 
 CourseMind is an AI learning workflow for students and educators. It turns uploaded course materials into a traceable knowledge base, grounded answers, visual study cards, AI conversations, quizzes, and review focus points. The product is designed as a complete study loop: upload course documents, ask grounded questions, organize knowledge on a learning canvas, and continue learning with AI assistance.
 

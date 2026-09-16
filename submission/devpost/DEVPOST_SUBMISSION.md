@@ -8,7 +8,7 @@ CourseMind
 
 ## Short Tagline
 
-Turn course materials into an AI study canvas for notes, follow-ups, quizzes, and personalized review.
+CourseMind: Turn course materials into a canvas that learns with you.
 
 ## Project Description
 

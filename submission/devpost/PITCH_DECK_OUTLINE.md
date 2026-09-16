@@ -4,7 +4,7 @@ Devpost asks for a presentation deck of up to 10 slides. This outline is the sou
 
 ## Slide 1: CourseMind
 
-Turn course materials into an AI study canvas for notes, follow-ups, quizzes, and personalized review.
+CourseMind: Turn course materials into a canvas that learns with you.
 
 Presenter note:
 
@@ -125,4 +125,3 @@ Next steps:
 - Add spaced repetition and long-term learner memory.
 - Export notes to Markdown, flashcards, or study plans.
 - Add instructor analytics for class-level weak points.
-

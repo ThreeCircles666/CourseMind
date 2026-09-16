@@ -1,7 +1,7 @@
 export default {
   common: {
     appName: 'CourseMind',
-    tagline: 'CourseMind：从课件到笔记、追问、自测与复习重点，一站式生成你的 AI 学习画布。',
+    tagline: 'CourseMind：把课件变成懂你的学习画布。',
     welcome: '欢迎回来，{nickname}！',
     logout: '退出登录',
     back: '返回',
@@ -320,7 +320,7 @@ export default {
   },
   about: {
     title: 'CourseMind',
-    tagline: 'AI 驱动的智能学习助手',
+    tagline: 'CourseMind：把课件变成懂你的学习画布。',
     intro: {
       title: '产品简介',
       description: 'CourseMind 是一款基于 AI 的智能学习助手，帮助学生和学习者更高效地理解和掌握课程内容。通过上传课件文档，CourseMind 可以自动生成知识卡片、提供智能问答、创建学习画布，让学习过程更加可视化和互动化。',
