@@ -111,29 +111,87 @@ function handleCommand(command: string) {
             <div
               v-for="action in quickActions"
               :key="action.route"
-              class="action-card cm-card"
+              :class="[
+                'action-card', 
+                'cm-card',
+                `feature-card--${action.icon}`
+              ]"
               @click="navigateTo(action.route)"
             >
-              <div class="action-icon" :style="{ color: action.color }">
-                <el-icon :size="32">
-                  <svg v-if="action.icon === 'search'" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-                    <path fill="currentColor" d="m795.904 750.72 124.992 124.928a32 32 0 0 1-45.248 45.248L750.656 795.904a416 416 0 1 1 45.248-45.248zM480 832a352 352 0 1 0 0-704 352 352 0 0 0 0 704z"/>
-                  </svg>
-                  <svg v-else-if="action.icon === 'canvas'" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-                    <path fill="currentColor" d="M160 256h256a32 32 0 0 1 32 32v256a32 32 0 0 1-32 32H160a32 32 0 0 1-32-32V288a32 32 0 0 1 32-32zm0 384h256a32 32 0 0 1 32 32v256a32 32 0 0 1-32 32H160a32 32 0 0 1-32-32V672a32 32 0 0 1 32-32zm384-384h320a32 32 0 0 1 32 32v256a32 32 0 0 1-32 32H544a32 32 0 0 1-32-32V288a32 32 0 0 1 32-32zm0 384h320a32 32 0 0 1 32 32v256a32 32 0 0 1-32 32H544a32 32 0 0 1-32-32V672a32 32 0 0 1 32-32z"/>
-                  </svg>
-                  <svg v-else-if="action.icon === 'chat'" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-                    <path fill="currentColor" d="M273.536 736H800a64 64 0 0 0 64-64V256a64 64 0 0 0-64-64H224a64 64 0 0 0-64 64v570.88L273.536 736zM296 800 147.968 918.4A32 32 0 0 1 96 893.44V256a128 128 0 0 1 128-128h576a128 128 0 0 1 128 128v416a128 128 0 0 1-128 128H296z"/>
-                  </svg>
-                  <svg v-else-if="action.icon === 'document'" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-                    <path fill="currentColor" d="M832 384H576V128H192v768h640V384zm-26.496-64L640 154.496V320h165.504zM160 64h480l256 256v608a32 32 0 0 1-32 32H160a32 32 0 0 1-32-32V96a32 32 0 0 1 32-32z"/>
-                  </svg>
-                </el-icon>
+              <!-- Background Illustration -->
+              <div class="feature-card__illustration" aria-hidden="true">
+                <!-- Knowledge Q&A: Magnifying glass + documents -->
+                <svg v-if="action.icon === 'search'" viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="35" fill="none" stroke="currentColor" stroke-width="3" opacity="0.15"/>
+                  <line x1="85" y1="85" x2="110" y2="110" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.15"/>
+                  <rect x="130" y="30" width="50" height="60" rx="4" fill="none" stroke="currentColor" stroke-width="2" opacity="0.1"/>
+                  <line x1="140" y1="45" x2="170" y2="45" stroke="currentColor" stroke-width="2" opacity="0.1"/>
+                  <line x1="140" y1="55" x2="170" y2="55" stroke="currentColor" stroke-width="2" opacity="0.1"/>
+                  <line x1="140" y1="65" x2="160" y2="65" stroke="currentColor" stroke-width="2" opacity="0.1"/>
+                </svg>
+                
+                <!-- Learning Canvas: Connected nodes -->
+                <svg v-else-if="action.icon === 'canvas'" viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="50" y1="40" x2="100" y2="80" stroke="currentColor" stroke-width="2" opacity="0.08"/>
+                  <line x1="100" y1="80" x2="150" y2="50" stroke="currentColor" stroke-width="2" opacity="0.08"/>
+                  <line x1="100" y1="80" x2="130" y2="120" stroke="currentColor" stroke-width="2" opacity="0.08"/>
+                  <rect x="35" y="25" width="30" height="30" rx="6" fill="currentColor" opacity="0.12"/>
+                  <circle cx="100" cy="80" r="18" fill="currentColor" opacity="0.15"/>
+                  <rect x="135" y="35" width="30" height="30" rx="6" fill="currentColor" opacity="0.12"/>
+                  <rect x="115" y="105" width="30" height="30" rx="6" fill="currentColor" opacity="0.1"/>
+                  <polygon points="100,70 105,75 100,80 95,75" fill="white" opacity="0.3"/>
+                </svg>
+                
+                <!-- AI Chat: Chat bubbles + sparkles -->
+                <svg v-else-if="action.icon === 'chat'" viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="40" y="40" width="80" height="50" rx="12" fill="currentColor" opacity="0.12"/>
+                  <polygon points="60,90 60,105 75,90" fill="currentColor" opacity="0.12"/>
+                  <rect x="80" y="70" width="90" height="50" rx="12" fill="currentColor" opacity="0.15"/>
+                  <polygon points="150,120 150,135 135,120" fill="currentColor" opacity="0.15"/>
+                  <circle cx="160" cy="35" r="3" fill="currentColor" opacity="0.2"/>
+                  <circle cx="175" cy="45" r="2" fill="currentColor" opacity="0.15"/>
+                  <circle cx="170" cy="28" r="2.5" fill="currentColor" opacity="0.18"/>
+                  <line x1="45" y1="30" x2="55" y2="30" stroke="currentColor" stroke-width="2" opacity="0.1"/>
+                  <line x1="50" y1="25" x2="50" y2="35" stroke="currentColor" stroke-width="2" opacity="0.1"/>
+                </svg>
+                
+                <!-- Documents: Stacked files + upload arrow -->
+                <svg v-else-if="action.icon === 'document'" viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="50" y="50" width="60" height="75" rx="4" fill="currentColor" opacity="0.08"/>
+                  <rect x="60" y="45" width="60" height="75" rx="4" fill="currentColor" opacity="0.12"/>
+                  <rect x="70" y="40" width="60" height="75" rx="4" fill="currentColor" opacity="0.15"/>
+                  <line x1="80" y1="60" x2="110" y2="60" stroke="white" stroke-width="2" opacity="0.4"/>
+                  <line x1="80" y1="70" x2="115" y2="70" stroke="white" stroke-width="2" opacity="0.4"/>
+                  <line x1="80" y1="80" x2="105" y2="80" stroke="white" stroke-width="2" opacity="0.4"/>
+                  <polyline points="145,80 145,50 145,80 155,70" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.15"/>
+                  <polyline points="145,80 135,70" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.15"/>
+                </svg>
               </div>
-              <div class="action-content">
-                <h3 class="action-title">{{ action.title }}</h3>
-                <p class="action-desc">{{ action.desc }}</p>
+              
+              <!-- Content Layer -->
+              <div class="feature-card__content">
+                <div class="action-icon" :style="{ color: action.color }">
+                  <el-icon :size="32">
+                    <svg v-if="action.icon === 'search'" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+                      <path fill="currentColor" d="m795.904 750.72 124.992 124.928a32 32 0 0 1-45.248 45.248L750.656 795.904a416 416 0 1 1 45.248-45.248zM480 832a352 352 0 1 0 0-704 352 352 0 0 0 0 704z"/>
+                    </svg>
+                    <svg v-else-if="action.icon === 'canvas'" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+                      <path fill="currentColor" d="M160 256h256a32 32 0 0 1 32 32v256a32 32 0 0 1-32 32H160a32 32 0 0 1-32-32V288a32 32 0 0 1 32-32zm0 384h256a32 32 0 0 1 32 32v256a32 32 0 0 1-32 32H160a32 32 0 0 1-32-32V672a32 32 0 0 1 32-32zm384-384h320a32 32 0 0 1 32 32v256a32 32 0 0 1-32 32H544a32 32 0 0 1-32-32V288a32 32 0 0 1 32-32zm0 384h320a32 32 0 0 1 32 32v256a32 32 0 0 1-32 32H544a32 32 0 0 1-32-32V672a32 32 0 0 1 32-32z"/>
+                    </svg>
+                    <svg v-else-if="action.icon === 'chat'" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+                      <path fill="currentColor" d="M273.536 736H800a64 64 0 0 0 64-64V256a64 64 0 0 0-64-64H224a64 64 0 0 0-64 64v570.88L273.536 736zM296 800 147.968 918.4A32 32 0 0 1 96 893.44V256a128 128 0 0 1 128-128h576a128 128 0 0 1 128 128v416a128 128 0 0 1-128 128H296z"/>
+                    </svg>
+                    <svg v-else-if="action.icon === 'document'" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+                      <path fill="currentColor" d="M832 384H576V128H192v768h640V384zm-26.496-64L640 154.496V320h165.504zM160 64h480l256 256v608a32 32 0 0 1-32 32H160a32 32 0 0 1-32-32V96a32 32 0 0 1 32-32z"/>
+                    </svg>
+                  </el-icon>
+                </div>
+                <div class="action-content">
+                  <h3 class="action-title">{{ action.title }}</h3>
+                  <p class="action-desc">{{ action.desc }}</p>
+                </div>
               </div>
+              
               <div class="action-arrow">
                 <el-icon>
                   <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
@@ -275,16 +333,57 @@ function handleCommand(command: string) {
 .action-card {
   padding: var(--cm-space-6);
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: var(--cm-space-4);
   position: relative;
+  overflow: hidden;
   transition: all var(--cm-transition-base);
+  border: 1px solid var(--cm-border-light);
 }
 
 .action-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--cm-shadow-lg);
+  border-color: var(--cm-border-medium);
+}
+
+/* Background Illustration Layer */
+.feature-card__illustration {
+  position: absolute;
+  right: -10px;
+  bottom: -10px;
+  width: 180px;
+  height: 140px;
+  pointer-events: none;
+  z-index: 0;
+  transition: all var(--cm-transition-base);
+}
+
+.feature-card--search .feature-card__illustration {
+  color: #8B5CF6;
+}
+
+.feature-card--canvas .feature-card__illustration {
+  color: #F59E0B;
+}
+
+.feature-card--chat .feature-card__illustration {
+  color: #3B82F6;
+}
+
+.feature-card--document .feature-card__illustration {
+  color: #10B981;
+}
+
+.action-card:hover .feature-card__illustration {
+  transform: translate(4px, 4px);
+  opacity: 0.9;
+}
+
+/* Content Layer */
+.feature-card__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: var(--cm-space-4);
 }
 
 .action-icon {
@@ -295,6 +394,13 @@ function handleCommand(command: string) {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--cm-transition-base);
+}
+
+.action-card:hover .action-icon {
+  transform: scale(1.05);
+  box-shadow: var(--cm-shadow-sm);
 }
 
 .action-content {
@@ -390,6 +496,23 @@ function handleCommand(command: string) {
   .actions-grid {
     grid-template-columns: 1fr;
     gap: var(--cm-space-4);
+  }
+
+  .feature-card__illustration {
+    width: 140px;
+    height: 110px;
+    right: -5px;
+    bottom: -5px;
+    opacity: 0.8;
+  }
+
+  .action-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .action-icon :deep(.el-icon) {
+    font-size: 24px;
   }
 }
 </style>
