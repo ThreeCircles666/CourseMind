@@ -57,7 +57,7 @@ services:
       
       # RAG configuration
       RAG_MIN_SIMILARITY: 0.3
-      RAG_CHAT_MODEL: qwen-turbo
+      RAG_CHAT_MODEL: ${RAG_CHAT_MODEL:-qwen3.8-flash}
       RAG_MAX_CONTEXT_CHARS: 12000
       RAG_MAX_EXCERPT_CHARS: 300
       REVIEW_MAX_PAGES: ${REVIEW_MAX_PAGES:-120}
@@ -91,9 +91,9 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
+    # Keep frontend source and node_modules from the same image build.
+    # Host source mounts can expose new imports while retaining old dependencies.
+    # Rebuild after pulling changes: docker compose up -d --build backend frontend
 
 volumes:
   coursemind-postgres-data:

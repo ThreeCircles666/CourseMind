@@ -138,3 +138,12 @@ docker compose up --build
 - Backend: Python 3.11 + FastAPI + SQLAlchemy + Alembic
 - Frontend: Node 20 + Vue 3 + Vite + TypeScript + Element Plus
 - Container runtime: Docker + Docker Compose
+
+
+## Updating an existing installation
+
+After pulling source or dependency changes, run `docker compose up -d --build backend frontend`. Restarting existing containers does not update their images or install new dependencies.
+
+The default frontend no longer mounts host source/public directories: source and dependencies must come from the same image build. Per-context `.dockerignore` files exclude host node_modules, Python environments, private environment files and uploads. The frontend uses Node 22, matching CI. The text-model default is `qwen3.8-flash`, matching the backend, and can be overridden with `RAG_CHAT_MODEL`.
+
+This command preserves the database volume and uploaded files. Do not use `docker compose down -v` to update the application. For frontend hot reload, use the local `npm run dev` workflow described in README. The startup script verifies that the review page compiles and the review dependencies exist.

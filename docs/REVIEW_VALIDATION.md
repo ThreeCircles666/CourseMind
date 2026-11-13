@@ -36,7 +36,7 @@ UI 测试模拟 API，不能证明数据库或模型输出质量；相应行为�
 
 - 新增 GitHub Actions 执行后端独立测试库回归、前端构建和 Playwright。远程运行状态应以 GitHub Actions 页面为准。
 - 首次远程运行发现旧 PDF 测试使用的 ReportLab 未声明为开发依赖；已补入 `.[dev]`，使全新环境也能安装完整测试依赖。
-- 本轮未重建完整 Docker 镜像；本机已经实际验证 LibreOffice 转换。Dockerfile 中已添加 Impress 和中文字体依赖。
+- 首次发布未重建 Docker 镜像；后续用户环境复测已重建前后端，实际确认 KaTeX、PDFium、PPTX 与 LibreOffice 可用。直接针对 Docker 的 5174 地址再次运行浏览器验收，3 项通过。
 - 部署仍要求单 API worker 和持久上传卷；BackgroundTasks 不提供进程重启后的续跑。
 - 默认合计 120 页、30 分钟总超时；离线原图合计上限 100 MB。
 - 保留原项目构建的大主包提示；没有把性能优化或所有依赖安全问题列为本次已解决事项。
@@ -47,4 +47,14 @@ Validated on 2026-11-13: 341 backend tests passed against an isolated PostgreSQL
 
 Real-provider smoke tests used synthetic content only. Text summarization with `qwen3.8-flash` passed source validation. `qwen3-vl-plus` read a synthetic image. The complete two-slide PPTX pipeline (LibreOffice conversion, page rendering, visual reading, source-bound generation) finished ready with two pages, one section, two quick-reference entries and one correction candidate.
 
-These are connectivity and regression checks, not a semantic accuracy benchmark. The Docker image was not rebuilt in this run. Single-worker persistence, restart recovery, page/time/export limits and other boundaries are documented in [Courseware Review](COURSEWARE_REVIEW.md). Remote CI status is reported by GitHub Actions itself.
+These are connectivity and regression checks, not a semantic accuracy benchmark. Docker images were rebuilt in a subsequent runtime check; all three browser tests also passed against the actual Docker frontend on port 5174. Single-worker persistence, restart recovery, page/time/export limits and other boundaries are documented in [Courseware Review](COURSEWARE_REVIEW.md). Remote CI status is reported by GitHub Actions itself.
+
+
+## Docker 运行环境复测
+
+发现旧容器映射了新前端源码，但镜像内保留旧依赖，导致 KaTeX 无法导入；后端镜像也缺少新增依赖。已重建应用镜像、补齐每个构建上下文的 `.dockerignore`、取消默认前端源码映射并统一到 Node 22，启动脚本增加复习模块与依赖检查。数据库容器和课程上传目录保留。
+
+验收直接针对实际 Docker 页面：`PLAYWRIGHT_BASE_URL=http://127.0.0.1:5174 npm run test:e2e`。UI 测试的 API 仍为合成模拟接口，后端真实 AI 结果需单独核验。
+
+
+复测最终结果：实际前端容器内生产构建通过；实际 Docker 前端的 3 项浏览器测试通过。旧 `qwen-turbo` 配置在实测中持续返回 `429 / limit_requests`，已将 Docker 默认值与后端统一为同一凭证下可用的 `qwen3.8-flash`，并保留环境变量覆盖。更正后，在 Docker 后端中完成合成 PPTX 的转换、逐页视觉读取和总结，返回 ready：2 页、1 节、1 条速查、1 条勘误候选。

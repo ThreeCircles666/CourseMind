@@ -63,7 +63,10 @@ echo "4. 启动 Docker Compose 服务..."
 echo -e "${YELLOW}执行: docker compose up --build${NC}"
 echo ""
 
-docker compose up --build -d
+if ! docker compose up --build -d; then
+    echo -e "${RED}✗ 镜像构建或容器更新失败，请先修复上述错误${NC}"
+    exit 1
+fi
 
 echo ""
 echo "等待服务启动..."
@@ -128,6 +131,20 @@ fi
 echo ""
 
 # 显示访问信息
+echo "检查课件复习页面及依赖..."
+if ! curl -fsS http://127.0.0.1:5174/src/views/CoursewareReviewView.vue >/dev/null; then
+    echo -e "${RED}✗ 课件复习页面编译失败，请查看 docker compose logs frontend${NC}"
+    exit 1
+fi
+if ! docker compose exec -T frontend node -e "require.resolve('katex/dist/katex.min.css')" >/dev/null; then
+    echo -e "${RED}✗ 前端依赖未更新，请重新构建 frontend 镜像${NC}"
+    exit 1
+fi
+if ! docker compose exec -T backend python -c "from app.api.routes import review; import pypdfium2, pptx" >/dev/null; then
+    echo -e "${RED}✗ 后端复习模块未就绪，请重新构建 backend 镜像${NC}"
+    exit 1
+fi
+
 echo "====================================="
 echo -e "${GREEN}启动完成！${NC}"
 echo "====================================="

@@ -158,15 +158,23 @@ docker compose down -v
 docker compose up --build
 ```
 
+## 更新已有 Docker 环境
+
+拉取新代码后，需要重新构建应用镜像，才能更新前后端代码和依赖：
+
+```bash
+docker compose up -d --build backend frontend
+```
+
+`docker compose restart` 只重启旧容器，不会安装新增依赖。若看到 `Failed to resolve import katex/...`，通常是旧镜像未更新。
+
+默认前端不再映射宿主机 `src` / `public`，确保代码与依赖来自同一次镜像构建。每个构建目录都有独立 `.dockerignore`，防止本机 `node_modules`、虚拟环境、`.env` 或上传文件被复制进镜像。前端使用与 CI 一致的 Node 22。文字模型默认与后端一致为 `qwen3.8-flash`，可用 `RAG_CHAT_MODEL` 覆盖。
+
+此更新命令保留 PostgreSQL 数据卷和后端上传目录。**更新应用时不要运行 `docker compose down -v`**，该命令会删除数据库卷。
+
 ## 开发模式
 
-Docker Compose 已配置为开发友好模式：
-
-- **前端**: 源代码挂载，支持热重载
-- **后端**: 上传目录持久化
-- **数据库**: 数据持久化
-
-可以直接编辑代码，更改会自动生效（前端立即，后端需重启）。
+需要前端热重载时，按照 README 的本地开发说明运行 `npm run dev`。Docker 默认运行已构建的源码和依赖；代码变化后按上述命令重新构建。上传文件和数据库仍持久保存。
 
 ## 生产部署
 

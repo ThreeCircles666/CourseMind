@@ -148,3 +148,13 @@ Browser tests use synthetic materials and mocked APIs. They verify application i
 - [Qwen vision inputs](https://www.alibabacloud.com/help/en/model-studio/vision)
 - [PDFium Python API](https://pypdfium2.readthedocs.io/en/stable/python_api.html)
 - [KaTeX rendering options](https://katex.org/docs/options.html)
+
+
+## 已有 Docker 环境升级 / Existing Docker installations
+
+新代码已拉取并不意味着旧容器依赖已更新。执行 `docker compose up -d --build backend frontend` 更新应用镜像；普通 restart 不会安装 KaTeX、PDFium 或 PPTX 依赖。默认前端采用镜像内源码，避免宿主新源码配容器旧依赖。课程上传目录和数据库卷继续保留，升级不要使用 `down -v`。详见 [Docker 更新说明](../DOCKER_QUICKSTART.md)。
+
+Rebuild both app images after pulling updates. A restart cannot install new dependencies. Frontend source is now kept in the same image as its dependencies; host environments and private files are excluded from each build context. Database and upload volumes are preserved.
+
+
+Docker 的文字模型默认值已与后端统一为 `qwen3.8-flash`，可通过 `RAG_CHAT_MODEL` 覆盖；旧配置曾硬编码 `qwen-turbo`。若上游返回 429，应检查所选模型的请求限额；页面正常加载不等于该模型调用一定成功。
