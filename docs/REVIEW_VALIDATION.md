@@ -35,6 +35,7 @@ UI 测试模拟 API，不能证明数据库或模型输出质量；相应行为�
 ## 发布边界
 
 - 新增 GitHub Actions 执行后端独立测试库回归、前端构建和 Playwright。远程运行状态应以 GitHub Actions 页面为准。
+- 首次远程运行发现旧 PDF 测试使用的 ReportLab 未声明为开发依赖；已补入 `.[dev]`，使全新环境也能安装完整测试依赖。
 - 本轮未重建完整 Docker 镜像；本机已经实际验证 LibreOffice 转换。Dockerfile 中已添加 Impress 和中文字体依赖。
 - 部署仍要求单 API worker 和持久上传卷；BackgroundTasks 不提供进程重启后的续跑。
 - 默认合计 120 页、30 分钟总超时；离线原图合计上限 100 MB。
