@@ -25,9 +25,21 @@ const pendingImages = new Map<string, Promise<void>>()
 const original = ref<{ documentId: string; page: number; sectionId: string } | null>(null)
 let timer: ReturnType<typeof setTimeout> | undefined, observer: IntersectionObserver | undefined
 let epoch = 0, disposed = false
+const now = ref(Date.now())
+let clock: ReturnType<typeof setInterval> | undefined
 const ready = computed(() => review.value?.status === 'ready')
+const running = computed(() => review.value?.status === 'queued' || review.value?.status === 'processing')
+const sameActive = computed(() => running.value && review.value?.language === locale.value && review.value?.use_vision === useVision.value && JSON.stringify(review.value?.document_ids) === JSON.stringify(selected.value))
+const elapsed = computed(() => {
+  const seconds = Math.max(0, Math.floor((now.value - Date.parse(review.value?.created_at ?? '')) / 1000)) || 0
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+})
+const failureMessage = computed(() => {
+  const code = review.value?.error_code
+  return t(code && ['output_validation', 'provider_rate_limit', 'provider_error', 'timeout'].includes(code) ? `review.error_${code}` : 'review.failureHelp')
+})
 const active = computed(() => review.value?.sections.find(s => s.id === activeSection.value) ?? review.value?.sections[0])
-const kinds = ['definition', 'formula', 'rule', 'conclusion', 'steps'] as const
+const kinds = ['definition', 'formula', 'rule', 'conclusion', 'steps', 'list'] as const
 const entries = computed(() => review.value?.sections.flatMap(section => section.quick_reference.map((entry, index) => ({ ...entry, section, index }))) ?? [])
 const filteredEntries = computed(() => entries.value.filter(e => (filter.value === 'all' || e.kind === filter.value) && matches(`${e.name} ${e.text} ${e.section.title} ${e.evidence.map(p => `p${p.page}`).join(' ')}`)))
 const results = computed(() => {
@@ -130,6 +142,20 @@ async function generate() {
   if (!selected.value.length) return
   busy.value = true; error.value = ''
   try { const created = await api.createReview(selected.value, locale.value, useVision.value); await load(created.id); await refreshHistory() }
+  catch (e) {
+    if ((e as Error).message.includes('Two review jobs')) {
+      error.value = t('review.capacity'); await refreshHistory()
+      const active = history.value.find(item => item.status === 'queued' || item.status === 'processing')
+      if (active) { await load(active.id); ElMessage.info(t('review.capacity')) }
+    } else error.value = (e as Error).message
+  }
+  finally { busy.value = false }
+}
+async function retry() {
+  if (!review.value || busy.value) return
+  const { document_ids, language, use_vision } = review.value
+  busy.value = true; error.value = ''
+  try { const created = await api.createReview(document_ids, language, use_vision); await load(created.id); await refreshHistory() }
   catch (e) { error.value = (e as Error).message }
   finally { busy.value = false }
 }
@@ -175,14 +201,20 @@ watch(() => route.query.review, id => { if (typeof id === 'string' && review.val
 watch(active, section => { if (section) void image(section.document_id, section.pages[0]) })
 watch(quick, () => void nextTick(bindObserver))
 onMounted(async () => {
+  clock = setInterval(() => { now.value = Date.now() }, 1000)
   document.addEventListener('keydown', shortcut)
   try {
     const [docs] = await Promise.all([getDocuments(), refreshHistory()]); documents.value = docs
     if (typeof route.query.document === 'string') selected.value = [route.query.document]
     if (typeof route.query.review === 'string') await load(route.query.review)
+    else {
+      const latest = history.value.find(item => (item.status === 'processing' || item.status === 'queued') && (!selected.value.length || JSON.stringify(item.document_ids) === JSON.stringify(selected.value)))
+        ?? history.value.find(item => !selected.value.length || JSON.stringify(item.document_ids) === JSON.stringify(selected.value))
+      if (latest) await load(latest.id)
+    }
   } catch (e) { error.value = (e as Error).message }
 })
-onBeforeUnmount(() => { disposed = true; epoch++; clearTimeout(timer); observer?.disconnect(); clearImages(); document.removeEventListener('keydown', shortcut) })
+onBeforeUnmount(() => { disposed = true; epoch++; clearTimeout(timer); clearInterval(clock); observer?.disconnect(); clearImages(); document.removeEventListener('keydown', shortcut) })
 </script>
 
 <template>
@@ -270,10 +302,10 @@ onBeforeUnmount(() => { disposed = true; epoch++; clearTimeout(timer); observer?
         >{{ t('review.vision') }}<small>{{ t('review.visionHelp') }}</small></label>
         <button
           class="primary"
-          :disabled="busy || !selected.length"
+          :disabled="busy || !selected.length || sameActive"
           @click="generate"
         >
-          {{ t(busy ? 'review.starting' : 'review.generate') }}
+          {{ t(busy ? 'review.starting' : sameActive ? 'review.processing' : 'review.generate') }}
         </button>
         <label v-if="history.length">{{ t('review.history') }}<select
           :value="review?.id ?? ''"
@@ -299,16 +331,52 @@ onBeforeUnmount(() => { disposed = true; epoch++; clearTimeout(timer); observer?
         class="review-status"
         aria-live="polite"
       >
-        <h2>{{ t(`review.${review.status}`) }}</h2><p>{{ t('review.completedPages', { count: review.completed_pages }) }}</p><p
+        <h2>{{ t(`review.${review.status}`) }}</h2>
+        <template v-if="running">
+          <div
+            class="review-activity"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <span
+              class="activity-indicator"
+              aria-hidden="true"
+            />
+            <span>{{ t(`review.phase_${review.phase || (review.status === 'queued' ? 'queued' : 'reading')}`) }}<span v-if="review.current_pages?.length"> · {{ docName(review.current_document || '') }} · p{{ review.current_pages.join(', p') }}</span></span>
+            <small
+              class="activity-elapsed"
+              aria-live="off"
+            >{{ t('review.elapsed', { time: elapsed }) }}</small>
+          </div>
+          <p v-if="review.total_pages">
+            {{ t('review.pageProgress', { done: review.completed_pages, total: review.total_pages }) }}
+          </p>
+          <progress
+            v-if="review.total_pages"
+            :value="review.completed_pages"
+            :max="review.total_pages"
+          />
+          <p>{{ t('review.timingHelp') }}</p>
+        </template>
+        <p v-else>
+          {{ t('review.completedPages', { count: review.completed_pages }) }}
+        </p><p
           v-if="review.error"
           role="alert"
         >
-          {{ t('review.failureHelp') }}
+          {{ failureMessage }}
         </p><p v-else>
           {{ t('review.jobHelp') }}
-        </p><button @click="load(review!.id)">
+        </p><button
+          v-if="review.status === 'failed'"
+          :disabled="busy"
+          @click="retry"
+        >
+          {{ t('review.retry') }}
+        </button><button @click="load(review!.id)">
           {{ t('review.refresh') }}
-        </button><button @click="remove(review!.id)">
+        </button><button v-if="!running || now - Date.parse(review.created_at) > 3660000" @click="remove(review!.id)">
           {{ t('review.remove') }}
         </button>
       </section>
@@ -615,8 +683,8 @@ onBeforeUnmount(() => { disposed = true; epoch++; clearTimeout(timer); observer?
 .review-toolbar { display: flex; align-items: center; gap: .8rem; padding: .8rem 1.5rem; position: sticky; top: 0; background: var(--cm-bg-primary); border-bottom: 1px solid var(--cm-border-light); z-index: 20; flex-wrap: wrap; }
 .review-toolbar h1 { font-size: 1.05rem; margin: 0; white-space: nowrap; } .review-toolbar a { font-weight: 700; color: var(--cm-text-primary); text-decoration: none; }
 button, select, input { font: inherit; } button { cursor: pointer; border: 1px solid var(--cm-border-light); border-radius: 6px; padding: .45rem .7rem; background: var(--cm-bg-primary); color: inherit; } button:disabled { opacity: .5; cursor: default; } button:hover:not(:disabled), button[aria-pressed=true] { background: var(--cm-bg-secondary); } button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--cm-primary); outline-offset: 2px; }
-.review-search { flex: 1; min-width: 180px; position: relative; } input:not([type=checkbox]), select { border: 1px solid var(--cm-border-light); border-radius: 6px; padding: .5rem; width: 100%; background: var(--cm-bg-primary); color: inherit; } .search-results { position: absolute; top: 100%; width: 100%; max-height: 400px; overflow: auto; border: 1px solid var(--cm-border-light); background: var(--cm-bg-primary); z-index: 30; } .search-results button { display: block; width: 100%; text-align: left; border: 0; } .search-results button.selected { background: var(--cm-bg-secondary); } small { color: var(--cm-text-secondary); }
-main { max-width: 1700px; margin: auto; padding: 1.5rem; } .review-setup { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; padding: 1.5rem; border: 1px solid var(--cm-border-light); border-radius: 12px; margin-bottom: 1.5rem; } .review-setup>div { flex: 1 1 100%; } .review-setup h2 { margin: 0; font-size: 1.25rem; } .review-setup p { color: var(--cm-text-secondary); margin-bottom: 0; } .review-setup label { display: grid; gap: .4rem; flex: 1 1 240px; } .vision-option { max-width: 340px; } .vision-option input { width: fit-content; } .primary { background: var(--cm-primary); color: white; min-height: 40px; } .primary:hover:not(:disabled) { color: var(--cm-text-primary); } .review-error { padding: 1rem; border: 1px solid var(--cm-border-light); color: var(--cm-danger, #b91c1c); } .review-status { padding: 2rem; }
+.review-search { flex: 1; min-width: 180px; position: relative; } .review-search input, .review-setup select { border: 1px solid var(--cm-border-light); border-radius: 6px; padding: .5rem; width: 100%; background: var(--cm-bg-primary); color: inherit; } .search-results { position: absolute; top: 100%; width: 100%; max-height: 400px; overflow: auto; border: 1px solid var(--cm-border-light); background: var(--cm-bg-primary); z-index: 30; } .search-results button { display: block; width: 100%; text-align: left; border: 0; } .search-results button.selected { background: var(--cm-bg-secondary); } small { color: var(--cm-text-secondary); }
+main { max-width: 1700px; margin: auto; padding: 1.5rem; } .review-setup { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; padding: 1.5rem; border: 1px solid var(--cm-border-light); border-radius: 12px; margin-bottom: 1.5rem; } .review-setup>div { flex: 1 1 100%; } .review-setup h2 { margin: 0; font-size: 1.25rem; } .review-setup p { color: var(--cm-text-secondary); margin-bottom: 0; } .review-setup label { min-width: 0; display: grid; gap: .4rem; flex: 1 1 240px; } .vision-option { max-width: 340px; } .vision-option input { width: fit-content; } .primary { background: var(--cm-primary); color: white; min-height: 40px; } .primary:hover:not(:disabled) { color: var(--cm-text-primary); } .review-error { padding: 1rem; border: 1px solid var(--cm-border-light); color: var(--cm-danger, #b91c1c); } .review-status { padding: 2rem; }
 .review-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr) 240px; gap: 2rem; align-items: start; } .quick-layout { grid-template-columns: 220px minmax(0, 1fr); } .review-toc, .review-originals { position: sticky; top: 90px; max-height: calc(100vh - 110px); overflow: auto; } .review-toc button { display: block; width: 100%; text-align: left; padding: .7rem; border: 0; border-radius: 0; border-left: 2px solid transparent; } .review-toc button.current { border-left-color: var(--cm-primary); background: var(--cm-bg-secondary); } .review-toc small { display: block; margin-top: .3rem; } progress { width: 100%; accent-color: var(--cm-primary); } .review-originals h3 { margin-top: 0; font-size: 1rem; } .review-originals p { overflow-wrap: anywhere; font-size: .85rem; }
 .review-overview { border-bottom: 1px solid var(--cm-border-light); padding-bottom: 1.5rem; } .review-overview h2 { font-size: 1.5rem; } .review-boundary { color: var(--cm-text-secondary); line-height: 1.7; } .review-legend { display: flex; flex-wrap: wrap; gap: .5rem; font-size: .75rem; } .review-legend span { padding: .3rem .5rem; background: var(--cm-bg-secondary); border: 1px solid var(--cm-border-light); border-radius: 4px; }
 .review-section { padding: 2rem 0; border-bottom: 1px solid var(--cm-border-light); } .review-section, .review-block, .review-quick article { scroll-margin-top: 110px; outline: none; } .review-section h2 { font-size: 1.4rem; margin: .5rem 0 1.5rem; } .review-block { margin-bottom: 1.3rem; } .block-kind { font-size: .7rem; display: block; margin-bottom: .3rem; } .quote { border-left: 3px solid var(--cm-border-medium); padding: .5rem 1rem; } .inference { border-left: 3px dashed var(--cm-border-medium); padding-left: 1rem; } .missing { color: var(--cm-text-secondary); font-style: italic; } .term-link { border: 0; border-bottom: 1px dashed var(--cm-primary); color: var(--cm-primary); background: transparent; font-size: .8rem; padding: .2rem; margin: .2rem .4rem; }
@@ -624,5 +692,10 @@ main { max-width: 1700px; margin: auto; padding: 1.5rem; } .review-setup { displ
 .original-thumbnail { display: block; width: 100%; padding: .4rem; margin: .7rem 0; text-align: left; } .original-thumbnail img { width: 100%; } .original-thumbnail span { font-size: .8rem; } .original-full { display: block; width: 100%; height: auto; } .source-text { white-space: pre-wrap; } .original-controls { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; } pre { padding: 1rem; background: var(--cm-bg-secondary); overflow: auto; } .table-scroll { overflow: auto; } table { border-collapse: collapse; width: 100%; } td, th { text-align: left; border: 1px solid var(--cm-border-light); padding: .5rem; } .quick-filters { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1rem 0; } .review-quick details { margin-bottom: 1rem; } .review-quick summary { cursor: pointer; padding: .7rem 0; font-weight: 600; } .review-quick article { padding: 1rem; border-bottom: 1px solid var(--cm-border-light); } .review-quick h4 { margin: .5rem 0; } .mobile-nav { display: none; }
 @media(max-width:1100px) { .review-layout { grid-template-columns: 180px minmax(0,1fr); } .review-originals { display: none; } }
 @media(max-width:700px) { main { padding: .8rem; } .review-toolbar { padding: .6rem; gap: .5rem; } .review-toolbar h1 { flex: 1; } .review-search { order: 5; flex-basis: 100%; } .review-layout, .quick-layout { display: block; } .review-toc { display: none; } .review-toc.is-open { display: block; position: static; max-height: 50vh; margin-bottom: 1rem; } .mobile-nav { display: block; } .review-setup { padding: 1rem; } .review-section, .review-block, .review-quick article { scroll-margin-top: 150px; } }
-@media(prefers-reduced-motion:reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+.review-activity { display: flex; align-items: center; flex-wrap: wrap; gap: .7rem; padding: .9rem 0; line-height: 1.7; }
+.activity-indicator { width: .6rem; height: .6rem; border-radius: 50%; flex: 0 0 auto; background: var(--cm-primary); animation: activity-pulse 1.4s ease-in-out infinite; }
+.activity-elapsed { margin-left: auto; white-space: nowrap; }
+@keyframes activity-pulse { 50% { opacity: .3; } }
+.review-setup :deep(.el-select) { width: 100%; min-width: 0; }
+@media(prefers-reduced-motion:reduce) { * { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
 </style>

@@ -6,7 +6,7 @@ export interface ReviewBlock {
   text: string; evidence: Evidence[]; rows: string[][]
 }
 export interface QuickEntry {
-  kind: 'definition' | 'formula' | 'rule' | 'conclusion' | 'steps'
+  kind: 'definition' | 'formula' | 'rule' | 'conclusion' | 'steps' | 'list'
   name: string; text: string; evidence: Evidence[]
 }
 export interface Demo {
@@ -29,6 +29,7 @@ export interface CoursewareReview {
   id: string; document_ids: string[]; language: string; use_vision: boolean
   status: 'queued' | 'processing' | 'ready' | 'failed'; created_at: string; completed_pages: number
   documents: ReviewDocument[]; sections: ReviewSection[]; reviewed_sections: string[]; error: string | null
+  total_pages?: number; phase?: string; current_pages?: number[]; current_document?: string; error_code?: string
   duplicates: { document_id: string; page: number; other_document_id: string; other_page: number }[]
 }
 export type ReviewListItem = Pick<CoursewareReview, 'id' | 'document_ids' | 'language' | 'status' | 'created_at' | 'completed_pages'>

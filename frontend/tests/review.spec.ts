@@ -145,3 +145,39 @@ test('canvas binds source IDs rather than cycling retrieved pages', async ({ pag
   await expect(second.locator('.card-source')).toContainText('第 70 页')
   await expect(unknown.locator('.card-source')).not.toContainText('页')
 })
+
+
+test('restores active review and reports real stages, elapsed time, failure and retry', async ({ page }) => {
+  const state = structuredClone(fixture)
+  state.status = 'processing'; state.phase = 'summarizing'; state.completed_pages = 4; state.total_pages = 28
+  state.current_pages = [5, 6, 7, 8]; state.current_document = docId; state.sections = []
+  state.created_at = new Date(Date.now() - 65000).toISOString()
+  let submissions = 0
+  await page.route('**/api/v1/reviews**', async route => {
+    const path = new URL(route.request().url()).pathname
+    if (path.endsWith('/reviews') && route.request().method() === 'POST') {
+      submissions++; state.status = 'queued'; state.phase = 'queued'; state.error = null; state.error_code = undefined
+      return route.fulfill({ status: 202, json: state })
+    }
+    return route.fulfill({ json: path.endsWith('/reviews') ? [state] : state })
+  })
+  await page.goto('/review')
+  const activity = page.locator('.review-activity')
+  await expect(activity).toBeVisible()
+  await expect(activity).toContainText('正在整理讲解与速查')
+  await expect(activity).toContainText('p5, p6, p7, p8')
+  await expect(activity).toContainText(/已用时 1:\d{2}/)
+  await expect(page.locator('.review-status')).toContainText('已完成 4 / 28 页')
+  await mkdir('/tmp/coursemind-review-qa', { recursive: true })
+  await page.screenshot({ path: '/tmp/coursemind-review-qa/progress.png' })
+  state.phase = 'retrying'
+  await expect(activity).toContainText('正在修正生成结果并重试', { timeout: 8000 })
+  state.phase = 'validating'
+  await expect(activity).toContainText('正在核对页码与原文引用', { timeout: 8000 })
+  state.status = 'failed'; state.phase = 'failed'; state.error = 'Validation failed'; state.error_code = 'output_validation'
+  await expect(page.locator('.review-status')).toContainText('本次已停止', { timeout: 8000 })
+  await expect(activity).toBeHidden()
+  await page.getByRole('button', { name: '重新生成', exact: true }).click()
+  await expect(activity).toContainText('任务已排队，等待开始')
+  expect(submissions).toBe(1)
+})

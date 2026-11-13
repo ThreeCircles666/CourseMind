@@ -72,7 +72,12 @@ async def create_review(request: ReviewRequest, background_tasks: BackgroundTask
     # Limit pending work before starting any paid model calls. Artifacts remain readable after restarts.
     with CREATE_LOCK:
         directory = root / ".reviews" / str(user.id)
-        active = [p for p in directory.glob("*/review.json") if read_json(p).get("status") in {"queued", "processing"}]
+        active = [read_json(p) for p in directory.glob("*/review.json") if read_json(p).get("status") in {"queued", "processing"}]
+        for existing in active:
+            if (existing.get("document_ids") == state["document_ids"]
+                    and existing.get("language") == state["language"]
+                    and existing.get("use_vision") == state["use_vision"]):
+                return existing  # A double click must not start the same paid work twice.
         if len(active) >= 2:
             raise HTTPException(429, "Two review jobs are already active; wait for completion or remove an interrupted record")
         path = artifact_path(root, user.id, review_id)

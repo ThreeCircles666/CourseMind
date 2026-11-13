@@ -63,8 +63,9 @@ class FakeAI:
         if vision:
             return "Definition from chart: 2 + 2 = 5"
         pages = json.loads(content.split("\nPrevious validation failed:")[0])
+        text = "".join(span["text"] for span in pages[0]["source_spans"])
         return json.dumps(batch(tuple(p["number"] for p in pages),
-                                "Definition" if "Definition" in pages[0]["text"] else "Definition from chart"))
+                                "Definition" if "Definition" in text and 'chart' not in text else "Definition from chart"))
 
 
 def test_generation_persists_coverage_and_arithmetic(tmp_path):
@@ -227,3 +228,55 @@ def test_job_timeout_publishes_failure(tmp_path, monkeypatch):
     path = tmp_path / 'review.json'; write_json(path, {'status': 'queued'})
     asyncio.run(generate_review(path, []))
     assert read_json(path)['status'] == 'failed'
+
+
+def test_source_ids_copy_originals_and_reject_unknown_ids():
+    from app.services.review import source_spans
+    page = {'number': 1, 'text': 'Original German: Übertragungsglieder — Definition.'}
+    source_id = source_spans(page)[0]['source_id']
+    value = batch(); value['sections'][0]['blocks'][0].update(kind='quote', text='AI paraphrase', evidence=[{'page': 1, 'source_id': source_id}])
+    value['sections'][0]['takeaways'] = []
+    parsed = GeneratedBatch.model_validate(value)
+    validate_batch(parsed, [page])
+    assert parsed.sections[0].blocks[0].text == page['text']
+    assert parsed.sections[0].blocks[0].evidence[0].quote == page['text']
+    parsed.sections[0].blocks[0].evidence[0].source_id = 'P2-text-1'
+    with pytest.raises(ValueError, match='source ID'):
+        validate_batch(parsed, [page])
+    empty = batch(); empty['sections'][0]['blocks'][0]['evidence'] = [{'page': 1}]
+    with pytest.raises(ValueError, match='quotation'):
+        validate_batch(GeneratedBatch.model_validate(empty), [page])
+
+
+def test_progress_is_saved_before_waiting_for_ai(tmp_path):
+    path = tmp_path / 'review.json'; source = tmp_path / 'source.txt'; source.write_text('Definition')
+    write_json(path, {'id': str(uuid4()), 'language': 'en-US', 'use_vision': False,
+                     'documents': [], 'sections': [], 'duplicates': [], 'completed_pages': 0})
+    class ProgressAI(FakeAI):
+        async def complete(self, *args, **kwargs):
+            state = read_json(path)
+            assert state['total_pages'] == 1
+            assert state['phase'] == 'summarizing' and state['current_pages'] == [1]
+            return await super().complete(*args, **kwargs)
+    asyncio.run(generate_review(path, [{'id': str(uuid4()), 'name': 'source.txt', 'path': str(source)}], ProgressAI()))
+    assert read_json(path)['phase'] == 'ready'
+
+
+def test_duplicate_submission_reuses_active_job(owner_client, monkeypatch):
+    client, root, user, document = owner_client
+    calls = []
+    async def pending(path, sources): calls.append(path)
+    monkeypatch.setattr(routes, 'generate_review', pending)
+    request = {'document_ids': [str(document.id)]}
+    first = client.post('/api/v1/reviews', json=request)
+    second = client.post('/api/v1/reviews', json=request)
+    assert first.status_code == second.status_code == 202
+    assert first.json()['id'] == second.json()['id'] and len(calls) == 1
+    assert len(client.get('/api/v1/reviews').json()) == 1
+
+
+def test_source_list_is_a_supported_quick_reference_kind():
+    value = batch()
+    value['sections'][0]['quick_reference'] = [{'kind': 'list', 'name': 'Components', 'text': 'Definition',
+                                              'evidence': [{'page': 1, 'quote': 'Definition'}]}]
+    validate_batch(GeneratedBatch.model_validate(value), [{'number': 1, 'text': 'Definition'}])

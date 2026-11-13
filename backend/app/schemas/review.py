@@ -15,7 +15,8 @@ class ReviewRequest(BaseModel):
 
 class Evidence(BaseModel):
     page: int = Field(ge=1)
-    quote: str = Field(min_length=1, max_length=1500)
+    quote: str = Field(default="", max_length=1500)
+    source_id: str | None = Field(default=None, max_length=60)
     origin: Literal["text", "vision"] = "text"
 
 
@@ -27,7 +28,7 @@ class ReviewBlock(BaseModel):
 
 
 class QuickEntry(BaseModel):
-    kind: Literal["definition", "formula", "rule", "conclusion", "steps"]
+    kind: Literal["definition", "formula", "rule", "conclusion", "steps", "list"]
     name: str = Field(min_length=1, max_length=200)
     text: str = Field(min_length=1, max_length=3000)
     evidence: list[Evidence] = Field(min_length=1, max_length=12)
