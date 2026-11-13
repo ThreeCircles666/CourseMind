@@ -14,11 +14,12 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 # Supported file types
-SUPPORTED_EXTENSIONS = {".txt", ".md", ".markdown", ".pdf"}
+SUPPORTED_EXTENSIONS = {".txt", ".md", ".markdown", ".pdf", ".pptx"}
 SUPPORTED_MIMES = {
     "text/plain",
     "text/markdown",
     "application/pdf",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     "application/octet-stream",  # Only with valid extension
 }
 
@@ -121,6 +122,11 @@ def validate_file_type(filename: str, content_type: str, first_bytes: bytes) -> 
         return "application/pdf", ext
 
     # Text files
+    if ext == ".pptx":
+        if not first_bytes.startswith(b"PK\x03\x04"):
+            raise InvalidFileError("Invalid PPTX archive signature")
+        return "application/vnd.openxmlformats-officedocument.presentationml.presentation", ext
+
     if ext in {".txt", ".md", ".markdown"}:
         # Allow text/plain or text/markdown
         if content_type in {"text/plain", "text/markdown"}:
@@ -148,7 +154,7 @@ async def save_upload_file(
         suffix = Path(upload_file.filename or "").suffix.lower()
         max_bytes = (
             settings.upload_pdf_max_bytes
-            if suffix == ".pdf"
+            if suffix in {".pdf", ".pptx"}
             else settings.upload_text_max_bytes
         )
 

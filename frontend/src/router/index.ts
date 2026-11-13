@@ -17,6 +17,7 @@ const router = createRouter({
     { path: '/documents', name: 'documents', component: DocumentsView, meta: { requiresAuth: true } },
     { path: '/knowledge-ask', name: 'knowledge-ask', component: KnowledgeAskView, meta: { requiresAuth: true } },
     { path: '/canvas', name: 'canvas', component: LearningCanvasView },
+    { path: '/review', name: 'review', component: () => import('@/views/CoursewareReviewView.vue'), meta: { requiresAuth: true } },
     { path: '/login', name: 'login', component: AuthView, meta: { guestOnly: true } },
     { path: '/register', name: 'register', component: AuthView, meta: { guestOnly: true } },
   ],

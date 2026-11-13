@@ -4,6 +4,8 @@ This guide describes the current implementation of CourseMind: local setup, arch
 
 For the Chinese version, see [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md).
 
+New on 2026-11-13: full-document Courseware Review, original-page previews, quick references, search, progress, demonstrations, visual reading, correction decisions and standalone offline export. See the [implementation guide](COURSEWARE_REVIEW.md) and [validation record](REVIEW_VALIDATION.md).
+
 ## 1. Current Capabilities
 
 CourseMind is a Vue 3 + FastAPI + PostgreSQL/pgvector learning application. It currently supports:
@@ -189,7 +191,7 @@ Complete or partial answers must cite valid `[S1]`, `[S2]`, etc. Fabricated cita
 
 ## 7. Learning Canvas
 
-The Learning Canvas lives in `frontend/src/views/LearningCanvasView.vue`. It does not introduce a separate backend endpoint; real generation and follow-ups reuse `/api/v1/rag/ask`.
+The original card-based Learning Canvas lives in `frontend/src/views/LearningCanvasView.vue` and still reuses `/api/v1/rag/ask`. Its top-k generation is not a full-document summary. The new `/review` route uses a separate complete-source pipeline.
 
 ```text
 select processed document
@@ -278,7 +280,7 @@ Recent targeted validation:
 ## 11. Known Limits
 
 - Background processing uses FastAPI `BackgroundTasks`; production should use a durable task queue.
-- PPTX, DOCX, image OCR, and scanned-PDF OCR are not implemented.
+- PPTX text/table indexing and PDF/PPTX visual review are implemented. DOCX, standalone image uploads and an OCR-backed RAG index remain unsupported.
 - Some PDFs with custom font encodings may parse as garbled text.
 - The canvas is a card grid, not a fully draggable infinite canvas.
 - Weak point detection is based on follow-up counts, not a long-term learner model.
@@ -302,3 +304,14 @@ Recent targeted validation:
 - Did backend tests pass?
 - Did frontend type-check and build pass?
 - Does this guide need an update?
+
+
+## 14. Courseware Review (2026-11-13)
+
+The [feature guide](COURSEWARE_REVIEW.md) documents the typed output schema, owner-scoped API, full-page processing, evidence validation, vision configuration, arithmetic checks, step/affine demonstrations, offline export and recovery limits. No migration is required. Persist the upload volume including `.reviews`; update Python/npm dependencies. Docker includes LibreOffice and CJK fonts for PPTX original-page rendering.
+
+Use a single API worker. Background jobs do not resume after a process restart. Defaults: 120 source pages per request, 1,800 seconds per job, `qwen3-vl-plus` for optional vision. All source documents are reauthorized on every artifact access. Online progress and correction decisions persist server-side; offline changes stay in the browser.
+
+Existing canvas citations now bind to explicit source IDs, including explicit numeric `sourceIndex` translated to an S-number. Missing/invalid references remain unbound rather than being assigned an unrelated page by array position. UI locale determines new generation language; existing review bodies are not silently retranslated.
+
+Playwright tests cover desktop/mobile, sources, math, interactions and a network-free offline HTML file. Backend regression and real-provider smoke-test evidence are in the [validation record](REVIEW_VALIDATION.md).

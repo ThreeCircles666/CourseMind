@@ -1,4 +1,6 @@
+import { reviewEn } from './review'
 export default {
+  review: reviewEn,
   common: {
     appName: 'CourseMind',
     tagline: 'CourseMind: Turn course materials into a canvas that learns with you.',
@@ -40,7 +42,7 @@ export default {
     },
     documents: {
       title: 'Knowledge Base',
-      desc: 'Upload and manage documents (TXT, Markdown, PDF)',
+      desc: 'Upload and manage documents (TXT, Markdown, PDF, PPTX)',
       button: 'Manage Documents',
     },
     about: {
@@ -86,19 +88,19 @@ export default {
   },
   documents: {
     title: 'Knowledge Base',
-    subtitle: 'Upload and manage documents (TXT, Markdown, PDF)',
+    subtitle: 'Upload and manage documents (TXT, Markdown, PDF, PPTX)',
     upload: {
       title: 'Upload Document',
       dragText: 'Drag file here or',
       clickText: 'click to select',
-      supportedFormats: 'Supported formats: TXT, Markdown (.md / .markdown), PDF',
-      sizeLimit: 'Size limit: TXT/Markdown 10MB max, PDF 50MB max',
+      supportedFormats: 'Supported formats: TXT, Markdown (.md / .markdown), PDF, PPTX',
+      sizeLimit: 'Size limit: TXT/Markdown 10MB max, PDF/PPTX 50MB max',
       uploading: 'Uploading...',
       startUpload: 'Upload',
       selectFile: 'Please select a file',
       uploadSuccess: 'Uploaded successfully. Processing...',
       duplicateFile: 'This file already exists: {filename}',
-      formatNotice: 'Currently supports TXT, Markdown, and PDF. PPTX, DOCX, and image OCR are planned for later versions.',
+      formatNotice: 'Supports TXT, Markdown, PDF and PPTX. DOCX is not supported. Courseware Review offers visual reading for scanned pages and charts.',
     },
     list: {
       title: 'Document List',
@@ -127,8 +129,8 @@ export default {
     },
     errors: {
       unsupportedType: 'File type not supported',
-      unsupportedFormat: '{ext} files are not supported yet. Supported formats: TXT, Markdown, PDF.',
-      noExtension: 'This file has no extension. Supported formats: TXT, Markdown, PDF.',
+      unsupportedFormat: '{ext} files are not supported yet. Supported formats: TXT, Markdown, PDF, PPTX.',
+      noExtension: 'This file has no extension. Supported formats: TXT, Markdown, PDF, PPTX.',
       fileTooLarge: 'File size exceeds {size}MB limit',
       sizeCheckFailed: 'Unable to determine file size limit',
       uploadFailed: 'Upload failed',
@@ -329,7 +331,7 @@ export default {
       title: 'Core Features',
       documents: {
         title: 'Document Management',
-        description: 'Support for TXT, Markdown, PDF formats with automatic processing and indexing',
+        description: 'Support for TXT, Markdown, PDF, PPTX formats with automatic processing and indexing',
       },
       knowledgeAsk: {
         title: 'Knowledge Q&A',

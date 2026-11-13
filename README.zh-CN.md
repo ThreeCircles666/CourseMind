@@ -15,6 +15,14 @@ CourseMind 是一个面向学生和教学场景的 AI 学习工作流平台。�
 - 新增统一设计令牌，统一颜色、间距、卡片、按钮和页面节奏。
 - Devpost 提交材料已整理到 `submission/devpost/`。
 
+## 课件复习（新增）
+
+- 新增 `/review`：整份课件按页覆盖、章节讲解、来源校验、原页预览与双向定位。
+- 支持 PDF、PPTX、TXT、Markdown；可选逐页视觉读取图表和扫描页。
+- 定义/公式/规则速查、关键词搜索、手动复习进度、步骤与线性关系演示。
+- 勘误候选、显式算式复算与用户确认；下载包含原页和公式字体的离线 HTML。
+- 配置、API、存储和部署限制见 [课件复习开发指南](docs/COURSEWARE_REVIEW.md)。
+
 ## 核心功能
 
 ### AI 学习画布
@@ -29,7 +37,7 @@ CourseMind 是一个面向学生和教学场景的 AI 学习工作流平台。�
 
 ### 知识库问答
 
-- 支持上传 TXT、Markdown 和可复制文本的 PDF。
+- 支持上传 TXT、Markdown、可复制文本的 PDF 和 PPTX。
 - 自动解析、分块、向量化并存入 PostgreSQL + pgvector。
 - 基于用户选择的文档进行检索增强问答。
 - 展示引用来源和相似度信息。
@@ -67,6 +75,7 @@ CourseMind 是一个面向学生和教学场景的 AI 学习工作流平台。�
 | `/documents` | 文档管理 |
 | `/knowledge-ask` | 知识库问答 |
 | `/canvas` | 学习画布 |
+| `/review` | 课件复习与离线导出 |
 | `/chat` | AI 对话 |
 | `/about` | 产品说明与系统状态 |
 
@@ -237,8 +246,8 @@ Devpost 提交包位于 `submission/devpost/`：
 
 ## 当前边界
 
-- 支持 TXT、Markdown、可复制文本的 PDF；暂不支持 PPTX、DOCX 和图片 OCR。
-- 扫描版 PDF 或特殊字体编码的 PDF 可能无法解析。
+- 支持 TXT、Markdown、PDF、PPTX。课件复习可选视觉读取扫描页；RAG 索引仍依赖可提取文字，DOCX 和独立图片文件暂不支持。
+- 扫描版 PDF 或特殊字体编码的 PDF 可能无法建立文字索引，可在课件复习中选择逐页视觉读取。
 - 学习画布当前是结构化卡片工作区，不是真正无限自由画布。
 - 易忘点基于交互频率标记，尚未实现长期学习画像。
 - RAG 回答只基于上传资料，不进行联网搜索。
@@ -250,6 +259,8 @@ Devpost 提交包位于 `submission/devpost/`：
 - [演示检查清单](DEMO_CHECKLIST.md)
 - [项目总结](SUBMISSION_SUMMARY.md)
 - [开发者指南](docs/DEVELOPER_GUIDE.md)
+- [课件复习开发指南](docs/COURSEWARE_REVIEW.md)
+- [本次验证记录](docs/REVIEW_VALIDATION.md)
 
 ## 许可
 

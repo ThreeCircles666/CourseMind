@@ -10,6 +10,7 @@ from app.parsers.contracts import (
 from app.parsers.markdown_parser import MarkdownParser
 from app.parsers.pdf_parser import PdfParser
 from app.parsers.text_parser import TextParser
+from app.parsers.pptx_parser import PptxParser
 
 
 class ParserRegistry:
@@ -47,6 +48,7 @@ class ParserRegistry:
             '.md': self._markdown_parser,
             '.markdown': self._markdown_parser,
             '.pdf': self._pdf_parser,
+            '.pptx': PptxParser(max_size_bytes=max_pdf_size, max_pages=max_pdf_pages),
         }
 
         # MIME type hints
@@ -54,6 +56,7 @@ class ParserRegistry:
             'text/plain': {'.txt', '.md', '.markdown'},
             'text/markdown': {'.md', '.markdown'},
             'application/pdf': {'.pdf'},
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation': {'.pptx'},
         }
 
     def get_parser(

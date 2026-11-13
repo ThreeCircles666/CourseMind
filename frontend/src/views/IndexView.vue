@@ -10,6 +10,9 @@ const { t } = useI18n()
 
 const quickActions = [
   {
+    icon: 'document', title: t('review.title'), desc: t('review.intro'), route: '/review', color: '#7C3AED',
+  },
+  {
     icon: 'search',
     title: t('home.knowledgeAsk.title'),
     desc: t('home.knowledgeAsk.desc'),

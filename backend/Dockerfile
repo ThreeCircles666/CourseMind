@@ -7,6 +7,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     postgresql-client \
     curl \
+    libreoffice-impress \
+    fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy dependency files

@@ -43,6 +43,7 @@ interface CanvasCard {
   fileName?: string
   pageNumber?: number | null
   excerpt?: string
+  sourceId?: string
   followUpCount: number
   isWeakPoint: boolean
   isChild: boolean
@@ -67,6 +68,7 @@ interface StructuredConceptCard {
   summary?: string
   tag?: CanvasCard['tag']
   sourceIndex?: number
+  sourceId?: string
 }
 
 // Computed
@@ -394,7 +396,7 @@ function parseAIResponse(answer: string, documentId: string, sources: RagSource[
     // Check if this is a title line (number or bullet)
     if (/^[\d]+[.、)]|^[•\-*]/.test(line.trim())) {
       if (currentCard && currentCard.title) {
-        cards.push(completeCard(currentCard, documentId, sources[cards.length % Math.max(sources.length, 1)]))
+        cards.push(completeCard(currentCard, documentId, sources.find(s => s.source_id === currentCard?.sourceId)))
       }
       currentCard = parseListConceptLine(line)
     } else if (currentCard && line.trim()) {
@@ -404,13 +406,14 @@ function parseAIResponse(answer: string, documentId: string, sources: RagSource[
   }
   
   if (currentCard && currentCard.title) {
-    cards.push(completeCard(currentCard, documentId, sources[cards.length % Math.max(sources.length, 1)]))
+    cards.push(completeCard(currentCard, documentId, sources.find(s => s.source_id === currentCard?.sourceId)))
   }
   
   return cards.slice(0, 10) // Limit to 10 cards
 }
 
 function parseListConceptLine(line: string): Partial<CanvasCard> {
+  const sourceId = line.match(/\[(S\d+)\]/)?.[1]
   const text = line
     .replace(/^(?:[\d]+[.、)]|[•\-*])\s*/, '')
     .replace(/\s*\[S\d+\]\s*/g, '')
@@ -418,12 +421,13 @@ function parseListConceptLine(line: string): Partial<CanvasCard> {
   const separatorMatch = text.match(/[:：]/)
 
   if (!separatorMatch || separatorMatch.index === undefined) {
-    return { title: text }
+    return { title: text, sourceId }
   }
 
   const title = text.slice(0, separatorMatch.index).trim()
   const summary = text.slice(separatorMatch.index + 1).trim()
   return {
+    sourceId,
     title: title || text,
     summary,
   }
@@ -438,7 +442,7 @@ function parseStructuredCards(answer: string, documentId: string, sources: RagSo
     if (!Array.isArray(parsed)) return []
 
     return parsed
-      .map((item, index) => completeStructuredCard(item, documentId, sources, index))
+      .map(item => completeStructuredCard(item, documentId, sources))
       .filter((card): card is CanvasCard => card !== null)
       .slice(0, 10)
   } catch (error) {
@@ -462,7 +466,6 @@ function completeStructuredCard(
   item: unknown,
   documentId: string,
   sources: RagSource[],
-  index: number,
 ): CanvasCard | null {
   if (!item || typeof item !== 'object') return null
 
@@ -471,8 +474,8 @@ function completeStructuredCard(
   const summary = typeof raw.summary === 'string' ? raw.summary.trim() : ''
   if (!title || !summary) return null
 
-  const sourceIndex = typeof raw.sourceIndex === 'number' ? raw.sourceIndex - 1 : index
-  const source = sources[sourceIndex] || sources[index % Math.max(sources.length, 1)]
+  const sourceId = typeof raw.sourceId === 'string' ? raw.sourceId : Number.isInteger(raw.sourceIndex) ? `S${raw.sourceIndex}` : ''
+  const source = sources.find(s => s.source_id === sourceId)
 
   return {
     id: `card-${Date.now()}-${Math.random()}`,
@@ -885,6 +888,7 @@ function handleBack() {
             </div>
           </div>
           
+          <router-link :to="{ path: '/review', query: selectedDocumentId ? { document: selectedDocumentId } : {} }">{{ t('review.title') }}</router-link>
           <LocaleSwitcher />
         </div>
         

@@ -39,10 +39,11 @@ const mimeTypeMap: Record<string, string> = {
   'text/plain': 'TXT',
   'text/markdown': 'Markdown',
   'application/pdf': 'PDF',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PPTX',
 }
 
 // Allowed file extensions
-const allowedExtensions = ['.txt', '.md', '.markdown', '.pdf']
+const allowedExtensions = ['.txt', '.md', '.markdown', '.pdf', '.pptx']
 
 // MIME type compatibility rules
 const mimeCompatibility: Record<string, string[]> = {
@@ -50,6 +51,7 @@ const mimeCompatibility: Record<string, string[]> = {
   '.md': ['text/markdown', 'text/plain'],
   '.markdown': ['text/markdown', 'text/plain'],
   '.pdf': ['application/pdf'],
+  '.pptx': ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
 }
 
 // File size limits by extension
@@ -58,6 +60,7 @@ const maxSizeByExtension: Record<string, number> = {
   '.md': 10 * 1024 * 1024,
   '.markdown': 10 * 1024 * 1024,
   '.pdf': 50 * 1024 * 1024,
+  '.pptx': 50 * 1024 * 1024,
 }
 
 onMounted(async () => {
@@ -647,6 +650,9 @@ function goToCanvas(doc: Document) {
             >
               <template #default="{ row }">
                 <div class="documents__actions">
+                  <el-button size="small" @click="router.push({ path: '/review', query: { document: row.id } })">
+                    {{ t('review.title') }}
+                  </el-button>
                   <template v-if="row.status === 'succeeded'">
                     <el-button
                       type="primary"

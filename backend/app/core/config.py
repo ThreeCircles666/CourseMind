@@ -59,6 +59,11 @@ class Settings(BaseSettings):
     rag_max_context_chars: int = Field(default=12000, ge=1000, le=50000)
     rag_max_excerpt_chars: int = Field(default=300, ge=50, le=1000)
 
+    review_max_pages: int = Field(default=120, ge=1, le=500)
+    review_job_timeout_seconds: int = Field(default=1800, ge=60, le=3600)
+    review_vision_model: str = Field(default="qwen3-vl-plus")
+    review_ai_base_url: str = Field(default="https://dashscope.aliyuncs.com/compatible-mode/v1")
+
     # File upload configuration
     upload_root: str = Field(default="data/uploads")
     upload_text_max_bytes: int = Field(default=10 * 1024 * 1024)

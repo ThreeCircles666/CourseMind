@@ -1,4 +1,6 @@
+import { reviewZh } from './review'
 export default {
+  review: reviewZh,
   common: {
     appName: 'CourseMind',
     tagline: 'CourseMind：把课件变成懂你的学习画布。',
@@ -40,7 +42,7 @@ export default {
     },
     documents: {
       title: '知识库',
-      desc: '上传和管理文档，支持 TXT、Markdown、PDF 格式',
+      desc: '上传和管理文档，支持 TXT、Markdown、PDF、PPTX 格式',
       button: '管理文档',
     },
     about: {
@@ -86,19 +88,19 @@ export default {
   },
   documents: {
     title: '知识库管理',
-    subtitle: '上传和管理文档，支持 TXT、Markdown (.md / .markdown)、PDF 格式',
+    subtitle: '上传和管理文档，支持 TXT、Markdown (.md / .markdown)、PDF、PPTX 格式',
     upload: {
       title: '上传文档',
       dragText: '拖拽文件到此处或',
       clickText: '点击选择',
-      supportedFormats: '支持格式：TXT、Markdown (.md / .markdown)、PDF',
-      sizeLimit: '大小限制：TXT/Markdown 最大 10MB，PDF 最大 50MB',
+      supportedFormats: '支持格式：TXT、Markdown (.md / .markdown)、PDF、PPTX',
+      sizeLimit: '大小限制：TXT/Markdown 最大 10MB，PDF/PPTX 最大 50MB',
       uploading: '上传中...',
       startUpload: '开始上传',
       selectFile: '请选择文件',
       uploadSuccess: '上传成功，正在处理中...',
       duplicateFile: '该文件已存在：{filename}',
-      formatNotice: '当前支持 TXT、Markdown、PDF。PPTX、DOCX、图片 OCR 暂未开放，可在后续版本支持。',
+      formatNotice: '当前支持 TXT、Markdown、PDF、PPTX。DOCX 暂未开放；扫描件与图表可在课件复习中启用视觉读取。',
     },
     list: {
       title: '文档列表',
@@ -127,8 +129,8 @@ export default {
     },
     errors: {
       unsupportedType: '暂不支持该文件类型',
-      unsupportedFormat: '暂不支持 {ext} 文件。当前支持：TXT、Markdown、PDF。',
-      noExtension: '该文件没有扩展名。当前支持：TXT、Markdown、PDF。',
+      unsupportedFormat: '暂不支持 {ext} 文件。当前支持：TXT、Markdown、PDF、PPTX。',
+      noExtension: '该文件没有扩展名。当前支持：TXT、Markdown、PDF、PPTX。',
       fileTooLarge: '文件大小超过 {size}MB 限制',
       sizeCheckFailed: '无法确定文件大小限制',
       uploadFailed: '上传失败',
@@ -329,7 +331,7 @@ export default {
       title: '核心功能',
       documents: {
         title: '文档管理',
-        description: '支持 TXT、Markdown、PDF 格式文档上传，自动处理和索引',
+        description: '支持 TXT、Markdown、PDF、PPTX 格式文档上传，自动处理和索引',
       },
       knowledgeAsk: {
         title: '知识库问答',

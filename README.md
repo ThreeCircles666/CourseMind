@@ -15,6 +15,14 @@ CourseMind is an AI learning workflow for students and educators. It turns uploa
 - A reusable design token layer keeps colors, spacing, cards, buttons, and page rhythm consistent.
 - Devpost submission materials are included under `submission/devpost/`.
 
+## Courseware Review (new)
+
+- `/review` reads complete materials in source order with page coverage and quote validation.
+- PDF, PPTX, TXT and Markdown; optional visual reading for charts and scanned pages.
+- Original-page previews, chapter explanations, quick references, search, manual progress and source-based demonstrations.
+- Proposed corrections with arithmetic checks and user confirmation; self-contained offline HTML with original pages and math fonts.
+- See the [implementation guide](docs/COURSEWARE_REVIEW.md) for configuration, API, storage and deployment limits.
+
 ## Core Features
 
 ### AI Learning Canvas
@@ -29,7 +37,7 @@ CourseMind is an AI learning workflow for students and educators. It turns uploa
 
 ### Knowledge Base Q&A
 
-- Supports TXT, Markdown, and text-selectable PDF uploads.
+- Supports TXT, Markdown, text-selectable PDF and PPTX uploads.
 - Parses, chunks, embeds, and stores materials in PostgreSQL + pgvector.
 - Answers questions from selected documents using retrieval-augmented generation.
 - Shows cited sources and similarity information.
@@ -66,6 +74,7 @@ CourseMind is an AI learning workflow for students and educators. It turns uploa
 | `/register` | Register |
 | `/documents` | Document management |
 | `/knowledge-ask` | Knowledge base Q&A |
+| `/review` | Courseware Review and offline export |
 | `/canvas` | Learning canvas |
 | `/chat` | AI chat |
 | `/about` | Product overview and system status |
@@ -237,7 +246,7 @@ The Devpost-ready submission package is in `submission/devpost/`:
 
 ## Current Limits
 
-- Supports TXT, Markdown, and text-selectable PDF; PPTX, DOCX, and image OCR are not implemented yet.
+- Supports TXT, Markdown, PDF and PPTX. Courseware Review optionally reads scanned pages visually; RAG indexing still requires extractable text. DOCX and standalone image uploads are unsupported.
 - Scanned PDFs or PDFs with custom font encodings may fail to parse.
 - The learning canvas is currently a structured card workspace, not a fully freeform infinite canvas.
 - Weak points are based on interaction frequency, not a long-term learner model.
@@ -250,6 +259,8 @@ The Devpost-ready submission package is in `submission/devpost/`:
 - [Demo Checklist](DEMO_CHECKLIST.en.md)
 - [Project Summary](SUBMISSION_SUMMARY.en.md)
 - [Developer Guide](docs/DEVELOPER_GUIDE.en.md)
+- [Courseware Review implementation](docs/COURSEWARE_REVIEW.md)
+- [Validation record](docs/REVIEW_VALIDATION.md)
 
 ## License
 

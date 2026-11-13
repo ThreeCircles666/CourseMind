@@ -60,6 +60,9 @@ services:
       RAG_CHAT_MODEL: qwen-turbo
       RAG_MAX_CONTEXT_CHARS: 12000
       RAG_MAX_EXCERPT_CHARS: 300
+      REVIEW_MAX_PAGES: ${REVIEW_MAX_PAGES:-120}
+      REVIEW_VISION_MODEL: ${REVIEW_VISION_MODEL:-qwen3-vl-plus}
+      REVIEW_AI_BASE_URL: ${REVIEW_AI_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
     ports:
       - "8000:8000"
     depends_on:

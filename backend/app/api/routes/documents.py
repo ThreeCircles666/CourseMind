@@ -218,9 +218,14 @@ async def upload_document(
             response.duplicate = True
             return response
 
-        mime_type = "application/pdf" if safe_name.lower().endswith(".pdf") else (
-            "text/markdown" if safe_name.lower().endswith((".md", ".markdown")) else "text/plain"
-        )
+        if safe_name.lower().endswith(".pptx"):
+            mime_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        elif safe_name.lower().endswith(".pdf"):
+            mime_type = "application/pdf"
+        elif safe_name.lower().endswith((".md", ".markdown")):
+            mime_type = "text/markdown"
+        else:
+            mime_type = "text/plain"
         document = Document(
             id=document_id,
             user_id=current_user.id,

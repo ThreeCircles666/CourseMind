@@ -4,13 +4,15 @@
 
 设计取舍、真实失败案例和验证局限见 [架构与技术复盘](ARCHITECTURE_AND_DECISIONS.md)。
 
+2026-11-13 新增整份课件复习：章节讲解、逐页来源与原图、速查、搜索、手动进度、交互演示、视觉读取、离线导出及勘误确认。完整 API、配置、持久化与部署约束见 [课件复习开发指南](COURSEWARE_REVIEW.md)，验证结果见 [发布验证](REVIEW_VALIDATION.md)。
+
 ## 1. 当前能力
 
 CourseMind 是 Vue 3 + FastAPI + PostgreSQL/pgvector 的知识库问答应用，现已具备：
 
 - 用户注册、登录、刷新令牌和退出；
 - 普通 Qwen 流式聊天与会话历史；
-- TXT、Markdown、PDF 上传、校验、去重和后台处理；
+- TXT、Markdown、PDF、PPTX 上传、校验、去重和后台处理；
 - 文本解析、结构化切片、DashScope Embedding；
 - pgvector 余弦相似度检索；
 - 带来源引用和资料不足判断的 RAG 问答；
@@ -217,7 +219,7 @@ max(RAG_MIN_SIMILARITY, request.min_similarity or 0.0)
 
 ### 6.2 学习画布如何复用 RAG
 
-学习画布前端位于 `frontend/src/views/LearningCanvasView.vue`，不新增专用后端接口，而是复用 `/api/v1/rag/ask`：
+原有卡片式学习画布位于 `frontend/src/views/LearningCanvasView.vue`，仍复用 `/api/v1/rag/ask`。新增 `/review` 使用独立全文流程，不能把下列 top-k 卡片生成当作全文总结：
 
 ```text
 选择已处理文档
@@ -258,7 +260,7 @@ max(RAG_MIN_SIMILARITY, request.min_similarity or 0.0)
 - 仅在项目外做了 macOS 本地 OCR 单页试验：高清渲染改善明显，关键人口/面积数字可识别，但仍有漏字。OCR 未接入应用，不具备生产 OCR 能力，不应假定 macOS 试验可以直接部署到 Linux。
 - 下次优先抽查表格及图文混排页，核对文字、数字、单位及阅读顺序，再决定异常文本检测和 OCR 方案；不要直接索引乱码，也不要由模型猜测纠正原文。
 - 前端复选框存在 Element Plus label-as-value 弃用警告，待维护。
-- 已实现知识点卡片、选中内容追问和自测题生成；PPTX/DOCX、识图、OCR 接入、真正无限画布和完整学习者画像仍未实现。
+- 已实现知识点卡片、选中内容追问和自测题生成；截至该次记录，PPTX/DOCX、识图、OCR 接入、真正无限画布和完整学习者画像仍未实现。2026-11-13 已增加 PPTX 和复习专用视觉读取；DOCX、OCR 向量索引、无限画布与完整画像仍未实现。
 - 2026-09-14：修复学习画布真实生成失败问题。根因是前端要求 JSON 数组与后端 RAG 引用协议冲突，以及模型可能返回 fenced JSON。当前通过“编号列表 + 引用”的画布提示和后端 JSON 提取容错解决。已验证 `tests/test_rag_answer_status.py` 为 `15 passed`；完整后端测试未在本轮运行。
 
 文档内容被视为不可信数据并与系统规则隔离。任何不存在、属于其他用户或 `NULL owner` 的文档都统一返回 404；混合合法和越权 ID 时整个请求失败，Provider 不会被调用。
@@ -394,7 +396,7 @@ docker compose exec -T postgres pg_dump \
 
 1. 用持久任务队列替换进程内 BackgroundTasks；
 2. 建立带标注问题/答案/来源的 RAG 评测集；
-3. 增加前端 Vitest 与端到端浏览器测试；
+3. 已增加 Playwright 复习流程端到端测试；后续扩展 Vitest 及其他页面的端到端覆盖；
 4. 增加结构化日志、指标与任务恢复机制；
 5. 优化前端按路由拆包；
 6. 为学习画布增加持久化存储、拖拽布局和更完整的学习者画像；
@@ -410,3 +412,14 @@ docker compose exec -T postgres pg_dump \
 - 后端完整测试是否通过？
 - 前端 type-check、lint、build 是否通过？
 - 是否更新本手册中受影响的接口或流程？
+
+
+## 15. 课件复习（2026-11-13）
+
+详见 [课件复习开发指南](COURSEWARE_REVIEW.md)。新后端路由为 `app/api/routes/review.py`，前端为 `CoursewareReviewView.vue`，复习数据和图片保存在 `UPLOAD_ROOT/.reviews`。无需数据库迁移，部署需更新依赖并持久化上传卷；PPTX 原页需 LibreOffice，Docker 已包含。
+
+当前仅支持单 API worker；进程内任务不支持自动恢复。默认所有课件合计 120 页、任务 30 分钟总超时。视觉读取使用 `REVIEW_VISION_MODEL`（默认 `qwen3-vl-plus`），可通过 `REVIEW_AI_BASE_URL` 设置账号对应区域，沿用已有 DashScope Key。
+
+学习画布的引用绑定也已修正：按模型提供的 `[S编号]` / `sourceId` / 显式 `sourceIndex` 对应的来源编号匹配，不再按数组位置循环分配页码。没有匹配来源时不填页码，避免伪造来源。
+
+网页的语言选择控制界面与新任务生成语言，已保存复习的正文不随界面切换自动重译。复习进度是手动标记，勘误“已确认”表示用户核对后的判断。公式、演示和引用校验不能替代语义正确性评测。
