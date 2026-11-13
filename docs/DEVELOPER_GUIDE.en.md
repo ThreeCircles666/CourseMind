@@ -315,3 +315,11 @@ Use a single API worker. Background jobs do not resume after a process restart. 
 Existing canvas citations now bind to explicit source IDs, including explicit numeric `sourceIndex` translated to an S-number. Missing/invalid references remain unbound rather than being assigned an unrelated page by array position. UI locale determines new generation language; existing review bodies are not silently retranslated.
 
 Playwright tests cover desktop/mobile, sources, math, interactions and a network-free offline HTML file. Backend regression and real-provider smoke-test evidence are in the [validation record](REVIEW_VALIDATION.md).
+
+## 15. Live Knowledge Q&A activity
+
+The Q&A page uses `POST /api/v1/rag/ask/stream` with the existing request schema. SSE `phase` events correspond to real authorization, retrieval, generation and output/citation validation. The elapsed timer never invents phases or completion percentages. Only a validated `RagAskResponse` is emitted as `result`; errors terminate activity with a persistent stopped message. Insufficient context can finish after retrieval without calling a model. Hidden model reasoning and unvalidated answers are not streamed.
+
+The original JSON endpoint remains compatible. Authorization is checked before streaming and again inside an independently owned session. ContextVar observers isolate concurrent requests. Keep-alive comments and no-buffer/no-cache headers support proxies. Leaving the page aborts the connection, cancels the local generation coroutine and closes its session; this is not a durable background job.
+
+Backend tests cover phase order, refusal, ownership, authentication, invalid citations, provider errors, cancellation cleanup and concurrent observer isolation. Browser tests cover event-driven activity, elapsed time, fragmented UTF-8/CRLF frames, results, errors, interrupted streams and leaving the page. Only synthetic material and mocked providers are used.

@@ -147,6 +147,15 @@ export default {
     },
   },
   knowledgeAsk: {
+    activity: {
+      connecting: 'CourseMind is connecting to the knowledge base…',
+      authorizing: 'CourseMind is checking the selected materials…',
+      retrieving: 'CourseMind is retrieving relevant material…',
+      generating: 'CourseMind is generating a source-grounded answer…',
+      validating: 'CourseMind is checking the answer and citations…',
+      stopped: 'This question has stopped',
+      retryHelp: 'You can submit your question again; processing has ended.',
+    },
     title: 'Knowledge Q&A',
     subtitle: 'Ask questions based on your uploaded documents',
     headerSubtitle: 'Choose materials, ask a question, and review the cited sources',

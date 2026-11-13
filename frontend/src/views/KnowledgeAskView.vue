@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import * as documentsApi from '@/api/documents'
 import type { Document } from '@/api/documents'
-import { askKnowledgeBase } from '@/api/rag'
-import type { RagAnswer } from '@/api/rag'
+import { askKnowledgeBaseWithProgress } from '@/api/rag'
+import type { RagAnswer, RagPhase } from '@/api/rag'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
+import TaskActivity from '@/components/TaskActivity.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -18,6 +19,12 @@ const question = ref('')
 const loadingDocuments = ref(false)
 const asking = ref(false)
 const result = ref<RagAnswer | null>(null)
+const phase = ref<RagPhase | 'connecting'>('connecting')
+const askError = ref('')
+const elapsedSeconds = ref(0)
+let clock: ReturnType<typeof setInterval> | undefined
+let controller: AbortController | undefined
+const elapsedLabel = computed(() => t('review.elapsed', { time: `${Math.floor(elapsedSeconds.value / 60)}:${String(elapsedSeconds.value % 60).padStart(2, '0')}` }))
 
 const succeededDocuments = computed(() =>
   documents.value.filter((document) => document.status === 'succeeded'),
@@ -54,11 +61,22 @@ async function submitQuestion() {
   if (!canAsk.value) return
   asking.value = true
   result.value = null
+  askError.value = ''
+  phase.value = 'connecting'
+  elapsedSeconds.value = 0
+  const started = Date.now()
+  controller = new AbortController()
+  clock = setInterval(() => { elapsedSeconds.value = Math.floor((Date.now() - started) / 1000) }, 1000)
   try {
-    result.value = await askKnowledgeBase(question.value.trim(), selectedDocumentIds.value, locale.value)
+    result.value = await askKnowledgeBaseWithProgress(question.value.trim(), selectedDocumentIds.value, locale.value,
+      value => { phase.value = value }, controller.signal)
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : t('knowledgeAsk.errors.askFailed'))
+    if (!controller.signal.aborted) {
+      askError.value = error instanceof Error ? error.message : t('knowledgeAsk.errors.askFailed')
+      ElMessage.error(askError.value)
+    }
   } finally {
+    clearInterval(clock)
     asking.value = false
   }
 }
@@ -68,6 +86,7 @@ function formatSimilarity(similarity: number) {
 }
 
 onMounted(loadDocuments)
+onBeforeUnmount(() => { controller?.abort(); clearInterval(clock) })
 </script>
 
 <template>
@@ -101,7 +120,10 @@ onMounted(loadDocuments)
 
     <main class="knowledge-ask__main cm-container">
       <aside class="knowledge-panel">
-        <el-card shadow="never" class="knowledge-card">
+        <el-card
+          shadow="never"
+          class="knowledge-card"
+        >
           <div class="card-header">
             <div>
               <strong>{{ t('knowledgeAsk.documentStep') }}</strong>
@@ -147,7 +169,10 @@ onMounted(loadDocuments)
           </el-checkbox-group>
         </el-card>
 
-        <el-card shadow="never" class="knowledge-card scope-card">
+        <el-card
+          shadow="never"
+          class="knowledge-card scope-card"
+        >
           <strong>{{ t('knowledgeAsk.selectDocuments') }}</strong>
           <div class="scope-list">
             <el-tag
@@ -157,7 +182,10 @@ onMounted(loadDocuments)
             >
               {{ document.original_name }}
             </el-tag>
-            <el-text v-if="selectedDocuments.length === 0" type="info">
+            <el-text
+              v-if="selectedDocuments.length === 0"
+              type="info"
+            >
               {{ t('knowledgeAsk.noSucceededDocuments') }}
             </el-text>
           </div>
@@ -165,7 +193,10 @@ onMounted(loadDocuments)
       </aside>
 
       <section class="ask-workspace">
-        <el-card shadow="never" class="question-card">
+        <el-card
+          shadow="never"
+          class="question-card"
+        >
           <div class="card-header">
             <div>
               <strong>{{ t('knowledgeAsk.questionStep') }}</strong>
@@ -201,7 +232,14 @@ onMounted(loadDocuments)
           shadow="never"
           class="answer-card"
         >
-          <el-skeleton :rows="4" animated />
+          <TaskActivity
+            :label="t(`knowledgeAsk.activity.${phase}`)"
+            :elapsed="elapsedLabel"
+          />
+          <el-skeleton
+            :rows="4"
+            animated
+          />
         </el-card>
 
         <el-card
@@ -234,7 +272,10 @@ onMounted(loadDocuments)
               class="source-item"
             >
               <div class="source-item__title">
-                <el-tag size="small" effect="plain">
+                <el-tag
+                  size="small"
+                  effect="plain"
+                >
                   {{ source.source_id }}
                 </el-tag>
                 <strong>{{ source.file_name }}</strong>
@@ -250,6 +291,17 @@ onMounted(loadDocuments)
             :description="t('knowledgeAsk.noSources')"
             :image-size="80"
           />
+        </el-card>
+
+        <el-card
+          v-else-if="askError"
+          shadow="never"
+          class="answer-card"
+          role="alert"
+        >
+          <strong>{{ t('knowledgeAsk.activity.stopped') }}</strong>
+          <p>{{ askError }}</p>
+          <p>{{ t('knowledgeAsk.activity.retryHelp') }}</p>
         </el-card>
 
         <el-card

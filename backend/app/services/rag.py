@@ -8,6 +8,8 @@ import logging
 import json
 import re
 from uuid import UUID
+from contextvars import ContextVar
+from collections.abc import Callable
 
 from sqlalchemy.orm import Session
 
@@ -17,6 +19,15 @@ from app.schemas.rag import RagAskRequest, RagAskResponse, RagSource
 from app.services.retrieval import search, RetrievalHit
 
 logger = logging.getLogger(__name__)
+
+# Request-local observer: concurrent questions must never share progress or content.
+rag_progress: ContextVar[Callable[[str], None] | None] = ContextVar("rag_progress", default=None)
+
+
+def report_progress(phase: str) -> None:
+    observer = rag_progress.get()
+    if observer is not None:
+        observer(phase)
 
 # Configuration defaults
 DEFAULT_MAX_CONTEXT_CHARS = 12000
@@ -134,6 +145,7 @@ class RagService:
         )
 
         # Step 1: Retrieve relevant chunks
+        report_progress("retrieving")
         try:
             hits = await search(
                 session=session,
@@ -195,6 +207,7 @@ class RagService:
         user_prompt = self._build_user_prompt(context_str, request.question)
 
         # Step 5: Call chat model
+        report_progress("generating")
         try:
             result = await self.chat_provider.generate(
                 system_prompt=system_prompt,
@@ -205,6 +218,7 @@ class RagService:
             raise
 
         logger.info(f"Generated answer: {len(result.text)} chars")
+        report_progress("validating")
 
         # Retrieval relevance is not evidence sufficiency. Require the model
         # to report a separate, machine-readable answer status.

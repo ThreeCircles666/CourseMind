@@ -147,6 +147,15 @@ export default {
     },
   },
   knowledgeAsk: {
+    activity: {
+      connecting: 'CourseMind 正在连接知识库…',
+      authorizing: 'CourseMind 正在确认所选资料…',
+      retrieving: 'CourseMind 正在检索相关资料…',
+      generating: 'CourseMind 正在依据资料生成回答…',
+      validating: 'CourseMind 正在核对回答与引用…',
+      stopped: '本次问答已停止',
+      retryHelp: '你可以重新提问，不会继续显示处理中。',
+    },
     title: '知识库问答',
     subtitle: '基于已上传的文档进行智能问答',
     headerSubtitle: '选择资料后提问，回答将显示引用来源',
